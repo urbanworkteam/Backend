@@ -1,0 +1,35 @@
+# 로컬 개발용 설정 예시.
+# 실제 사용 시 application-local.yml 로 복사 후 값 채워 사용 (gitignore 됨).
+
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/farmily
+    username: farmily
+    password: farmily
+
+farmily:
+  jwt:
+    secret: local-dev-secret-please-change-this-to-at-least-32-bytes-random
+  kakao:
+    client-id: ""
+    client-secret: ""
+    redirect-uri: http://localhost:8080/auth/kakao/callback
+    admin-key: ""
+    local-rest-key: ""
+  s3:
+    bucket: farmily-local
+    region: ap-northeast-2
+    cdn-base-url: ""
+  kma:
+    service-key: ""
+  ai:
+    provider: mock
+  portone:
+    api-key: ""
+    api-secret: ""
+    imp-code: ""
+    test-mode: true
+
+logging:
+  level:
+    kr.farmily: DEBUG

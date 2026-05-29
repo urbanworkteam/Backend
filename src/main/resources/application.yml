@@ -1,0 +1,91 @@
+spring:
+  application:
+    name: farmily-api
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  datasource:
+    url: ${DB_URL}
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
+    hikari:
+      maximum-pool-size: 10
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        jdbc.time_zone: UTC
+
+server:
+  port: ${SERVER_PORT:8080}
+  forward-headers-strategy: framework
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui
+  api-docs:
+    path: /v3/api-docs
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info
+  endpoint:
+    health:
+      show-details: when-authorized
+
+farmily:
+  jwt:
+    secret: ${JWT_SECRET}
+    access-ttl-seconds: ${JWT_ACCESS_TTL_SECONDS:900}
+    refresh-ttl-seconds: ${JWT_REFRESH_TTL_SECONDS:2592000}
+  kakao:
+    client-id: ${KAKAO_CLIENT_ID:}
+    client-secret: ${KAKAO_CLIENT_SECRET:}
+    redirect-uri: ${KAKAO_REDIRECT_URI:}
+    admin-key: ${KAKAO_ADMIN_KEY:}
+    local-rest-key: ${KAKAO_LOCAL_REST_KEY:}
+  s3:
+    bucket: ${S3_BUCKET:farmily-local}
+    region: ${S3_REGION:ap-northeast-2}
+    cdn-base-url: ${CDN_BASE_URL:}
+    presign-ttl-seconds: 300
+  kma:
+    service-key: ${KMA_SERVICE_KEY:}
+    base-url: ${KMA_BASE_URL:https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0}
+  ai:
+    provider: ${AI_PROVIDER:mock}
+    aws-region: ${AWS_REGION:us-west-2}
+    bedrock-agent-id: ${BEDROCK_AGENT_ID:}
+    bedrock-agent-alias-id: ${BEDROCK_AGENT_ALIAS_ID:}
+    invoke-timeout-seconds: ${AI_INVOKE_TIMEOUT_SECONDS:120}
+    result-bucket: ${AI_RESULT_BUCKET:}
+  portone:
+    api-key: ${PORTONE_API_KEY:}
+    api-secret: ${PORTONE_API_SECRET:}
+    imp-code: ${PORTONE_IMP_CODE:}
+    webhook-secret: ${PORTONE_WEBHOOK_SECRET:}
+    test-mode: ${PORTONE_TEST_MODE:true}
+  fcm:
+    service-account-json: ${FCM_SERVICE_ACCOUNT_JSON:}
+  plans:
+    free:
+      credits-limit: 5
+      period: MONTHLY
+    all-in-one:
+      credits-limit: 50
+      period: MONTHLY
+      price: 14900
+
+logging:
+  level:
+    root: INFO
+    kr.farmily: DEBUG
+    org.hibernate.SQL: INFO
