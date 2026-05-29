@@ -1,6 +1,5 @@
 package kr.farmily.api.farmlocation.client;
 
-import kr.farmily.api.auth.client.KakaoProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
@@ -17,9 +16,9 @@ public class KakaoLocalClient {
     private static final String URL = "https://dapi.kakao.com/v2/local/search/address.json";
 
     private final WebClient client;
-    private final KakaoProperties props;
+    private final KakaoLocalProperties props;
 
-    public KakaoLocalClient(KakaoProperties props) {
+    public KakaoLocalClient(KakaoLocalProperties props) {
         this.props = props;
         this.client = WebClient.builder().build();
     }
