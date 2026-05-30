@@ -16,5 +16,6 @@ public record MyPageResponse(
 
     public record FarmLocationsSummary(long count) {}
 
-    public record SubscriptionSummary(String plan, int creditsUsed, int creditsLimit, OffsetDateTime resetAt) {}
+    public record SubscriptionSummary(String plan, int creditsUsed, int creditsLimit, OffsetDateTime resetAt,
+                                       OffsetDateTime lastPaidAt, OffsetDateTime nextBillingAt) {}
 }
