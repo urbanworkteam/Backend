@@ -10,6 +10,7 @@ import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.bedrockagentruntime.BedrockAgentRuntimeAsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
+import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 import java.net.URI;
@@ -19,10 +20,12 @@ public class AwsConfig {
 
     @Bean
     public S3Presigner s3Presigner(S3Properties props) {
+        boolean useCustomEndpoint = props.endpoint() != null && !props.endpoint().isBlank();
         S3Presigner.Builder builder = S3Presigner.builder()
                 .region(Region.of(props.region() != null ? props.region() : "ap-northeast-2"));
-        if (props.endpoint() != null && !props.endpoint().isBlank()) {
+        if (useCustomEndpoint) {
             builder.endpointOverride(URI.create(props.endpoint()));
+            builder.serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build());
         }
         applyCredentials(builder::credentialsProvider, props);
         return builder.build();
@@ -30,10 +33,12 @@ public class AwsConfig {
 
     @Bean
     public S3Client s3Client(S3Properties props) {
+        boolean useCustomEndpoint = props.endpoint() != null && !props.endpoint().isBlank();
         S3ClientBuilder builder = S3Client.builder()
                 .region(Region.of(props.region() != null ? props.region() : "ap-northeast-2"));
-        if (props.endpoint() != null && !props.endpoint().isBlank()) {
+        if (useCustomEndpoint) {
             builder.endpointOverride(URI.create(props.endpoint()));
+            builder.serviceConfiguration(S3Configuration.builder().pathStyleAccessEnabled(true).build());
         }
         applyCredentials(builder::credentialsProvider, props);
         return builder.build();
