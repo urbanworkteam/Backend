@@ -3,6 +3,7 @@ package kr.farmily.api.ai.service;
 import kr.farmily.api.ai.domain.ContentJob;
 import kr.farmily.api.ai.domain.ContentResult;
 import kr.farmily.api.ai.domain.JobStatus;
+import kr.farmily.api.ai.domain.Platform;
 import kr.farmily.api.ai.dto.ContentResultResponse;
 import kr.farmily.api.ai.dto.JobStatusResponse;
 import kr.farmily.api.ai.dto.UpdateResultRequest;
@@ -16,7 +17,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Arrays;
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -54,8 +57,45 @@ public class AiResultService {
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "결과를 찾을 수 없습니다"));
 
         List<String> urls = Arrays.stream(r.getCardImageKeys()).map(this::toCdnUrl).toList();
+        ContentResultResponse.StoreMeta storeMeta = job.getPlatform() == Platform.SMARTSTORE
+                ? extractStoreMeta(r.getMeta()) : null;
         return new ContentResultResponse(job.getPlatform(), urls, r.getCaption(),
-                r.getHashtags() == null ? List.of() : List.of(r.getHashtags()));
+                r.getHashtags() == null ? List.of() : List.of(r.getHashtags()),
+                storeMeta);
+    }
+
+    @SuppressWarnings("unchecked")
+    private ContentResultResponse.StoreMeta extractStoreMeta(Map<String, Object> meta) {
+        if (meta == null) return null;
+        Object raw = meta.get("storeMeta");
+        if (!(raw instanceof Map<?, ?> m)) return null;
+        Map<String, Object> sm = (Map<String, Object>) m;
+
+        List<String> reasons = sm.get("reasonsToBuy") instanceof List<?> l
+                ? l.stream().map(String::valueOf).toList() : null;
+
+        Map<String, String> productInfo = null;
+        if (sm.get("productInfo") instanceof Map<?, ?> pi) {
+            productInfo = new LinkedHashMap<>();
+            for (Map.Entry<?, ?> e : pi.entrySet()) {
+                productInfo.put(String.valueOf(e.getKey()), String.valueOf(e.getValue()));
+            }
+        }
+
+        Integer price = sm.get("price") instanceof Number n ? n.intValue() : null;
+
+        return new ContentResultResponse.StoreMeta(
+                asString(sm.get("brix")),
+                asString(sm.get("harvestPolicy")),
+                asString(sm.get("farmingYears")),
+                reasons,
+                productInfo,
+                price
+        );
+    }
+
+    private String asString(Object v) {
+        return v == null ? null : String.valueOf(v);
     }
 
     @Transactional

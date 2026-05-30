@@ -8,6 +8,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.bedrockagentruntime.BedrockAgentRuntimeAsyncClient;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -32,11 +33,34 @@ public class BedrockAgentClient {
 
     private Result mock(ContentJob job) {
         if (job.getPlatform() == Platform.SMARTSTORE) {
+            Map<String, Object> productInfo = new LinkedHashMap<>();
+            productInfo.put("품종", "설향");
+            productInfo.put("중량", "500g");
+            productInfo.put("원산지", "국내산 (충남 논산)");
+            productInfo.put("재배방식", "친환경 무농약");
+            productInfo.put("발송", "주문일 기준 익일 발송");
+
+            Map<String, Object> storeMeta = new LinkedHashMap<>();
+            storeMeta.put("brix", "18°Bx");
+            storeMeta.put("harvestPolicy", "당일 수확 발송");
+            storeMeta.put("farmingYears", "20년 재배 경력");
+            storeMeta.put("reasonsToBuy", List.of(
+                    "20년 경력 농부가 직접 재배",
+                    "당일 수확 → 신선도 보장",
+                    "친환경 무농약 인증"));
+            storeMeta.put("productInfo", productInfo);
+            storeMeta.put("price", 24900);
+
+            Map<String, Object> meta = new LinkedHashMap<>();
+            meta.put("provider", "mock");
+            meta.put("platform", "SMARTSTORE");
+            meta.put("storeMeta", storeMeta);
+
             return new Result(
                     new String[]{"ai-results/mock/" + UUID.randomUUID() + ".jpg"},
                     null,
                     null,
-                    Map.of("provider", "mock", "platform", "SMARTSTORE")
+                    meta
             );
         }
         return new Result(
