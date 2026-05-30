@@ -4,6 +4,7 @@ import kr.farmily.api.ai.domain.ContentJob;
 import kr.farmily.api.ai.domain.Platform;
 import kr.farmily.api.ai.dto.CreateContentRequest;
 import kr.farmily.api.ai.dto.JobCreatedResponse;
+import kr.farmily.api.ai.event.AiJobCreatedEvent;
 import kr.farmily.api.ai.repository.ContentJobRepository;
 import kr.farmily.api.common.exception.BusinessException;
 import kr.farmily.api.common.exception.ErrorCode;
@@ -13,6 +14,7 @@ import kr.farmily.api.diary.domain.FarmDiary;
 import kr.farmily.api.diary.repository.FarmDiaryRepository;
 import kr.farmily.api.subscription.service.CreditService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,7 +30,7 @@ public class AiContentService {
     private final FarmDiaryRepository diaryRepo;
     private final PhotoKeyValidator photoKeyValidator;
     private final CreditService creditService;
-    private final AiGenerationOrchestrator orchestrator;
+    private final ApplicationEventPublisher events;
 
     @Transactional
     public JobCreatedResponse create(long userId, CreateContentRequest req, String idemKey) {
@@ -54,7 +56,7 @@ public class AiContentService {
                 userId, req.platform(), req.cropId(), diaryIds, req.keywords(), extra, true, null
         ));
 
-        orchestrator.run(job.getId(), key);
+        events.publishEvent(new AiJobCreatedEvent(job.getId(), key));
 
         int remaining = creditService.getStatus(userId).creditsRemaining();
         return new JobCreatedResponse(job.getId(), job.getStatus(), remaining);

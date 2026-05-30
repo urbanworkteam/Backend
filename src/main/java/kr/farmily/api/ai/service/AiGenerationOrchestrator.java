@@ -5,6 +5,7 @@ import kr.farmily.api.ai.domain.ContentJob;
 import kr.farmily.api.ai.domain.ContentResult;
 import kr.farmily.api.ai.domain.JobStatus;
 import kr.farmily.api.ai.domain.Platform;
+import kr.farmily.api.ai.event.AiJobCreatedEvent;
 import kr.farmily.api.ai.repository.ContentJobRepository;
 import kr.farmily.api.ai.repository.ContentResultRepository;
 import kr.farmily.api.subscription.service.CreditService;
@@ -12,7 +13,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.event.TransactionPhase;
+import org.springframework.transaction.event.TransactionalEventListener;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -29,11 +33,23 @@ public class AiGenerationOrchestrator {
     private final BedrockAgentClient bedrockClient;
     private final AiProperties aiProps;
 
+    /**
+     * 잡 생성 트랜잭션이 커밋된 뒤에 비동기로 실행. 호출 측은 직접 invoke 하지 않고
+     * AiJobCreatedEvent 를 발행만 함. AFTER_COMMIT 이라 이전의
+     * "outer @Transactional 미커밋 -> findById 실패" race 가 발생할 수 없음.
+     */
     @Async("aiTaskExecutor")
-    @Transactional
-    public void run(long jobId, String idempotencyKey) {
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void onJobCreated(AiJobCreatedEvent event) {
+        long jobId = event.jobId();
+        String idempotencyKey = event.idempotencyKey();
+
         ContentJob job = jobRepo.findById(jobId).orElse(null);
-        if (job == null) return;
+        if (job == null) {
+            log.warn("AI job not found in AFTER_COMMIT listener: jobId={}", jobId);
+            return;
+        }
         try {
             job.transition(JobStatus.ANALYZING, 20);
             String summary = summaryBuilder.build(job.getUserId(), job.getDiaryIds());
