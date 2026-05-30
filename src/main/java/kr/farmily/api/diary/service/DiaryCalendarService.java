@@ -33,6 +33,7 @@ public class DiaryCalendarService {
                 .collect(Collectors.toMap(Crop::getId, c -> c));
 
         Map<LocalDate, List<CalendarMonthResponse.Tag>> byDate = new HashMap<>();
+        Map<LocalDate, List<Long>> idsByDate = new HashMap<>();
         for (FarmDiary d : diaries) {
             Crop c = crops.get(d.getCropId());
             String cropName = c != null ? c.getName() : "";
@@ -40,12 +41,16 @@ public class DiaryCalendarService {
             d.getWorkBlocks().forEach(wb -> byDate
                     .computeIfAbsent(d.getDiaryDate(), k -> new ArrayList<>())
                     .add(new CalendarMonthResponse.Tag(cropName, color, wb.getWorkType())));
+            idsByDate.computeIfAbsent(d.getDiaryDate(), k -> new ArrayList<>()).add(d.getId());
         }
 
         List<CalendarMonthResponse.Day> days = new ArrayList<>();
         for (int d = 1; d <= ym.lengthOfMonth(); d++) {
             LocalDate date = ym.atDay(d);
-            days.add(new CalendarMonthResponse.Day(date, byDate.getOrDefault(date, List.of())));
+            days.add(new CalendarMonthResponse.Day(
+                    date,
+                    byDate.getOrDefault(date, List.of()),
+                    idsByDate.getOrDefault(date, List.of())));
         }
         return new CalendarMonthResponse(days);
     }

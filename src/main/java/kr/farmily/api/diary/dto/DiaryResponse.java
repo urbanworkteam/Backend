@@ -34,7 +34,7 @@ public record DiaryResponse(
 
     public record WorkBlockDto(Long id, WorkType workType, String detail, Integer sortOrder) {}
 
-    public record PhotoDto(Long id, String url, Integer sortOrder) {}
+    public record PhotoDto(Long id, String url, String s3Key, Integer sortOrder) {}
 
     public static DiaryResponse from(FarmDiary d, FarmLocation loc, Crop crop, String cdnBase) {
         WeatherDto w = new WeatherDto(
@@ -49,7 +49,7 @@ public record DiaryResponse(
                 .map(b -> new WorkBlockDto(b.getId(), b.getWorkType(), b.getDetail(), b.getSortOrder()))
                 .toList();
         List<PhotoDto> photos = d.getPhotos().stream()
-                .map(p -> new PhotoDto(p.getId(), toUrl(cdnBase, p), p.getSortOrder()))
+                .map(p -> new PhotoDto(p.getId(), toUrl(cdnBase, p), p.getS3Key(), p.getSortOrder()))
                 .toList();
         return new DiaryResponse(
                 d.getId(),
