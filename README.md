@@ -51,5 +51,32 @@ cp src/main/resources/application.yml src/main/resources/application-local.yml
 - API: `docs/API_SPEC.md`
 - DB 스키마: `docs/DB_SCHEMA.md`
 
+## 브랜치 전략
+PR 마다 새 브랜치를 만들지 않고, 아래 4개의 **고정 브랜치**만 사용합니다.
+
+| 브랜치 | 용도 | 머지 대상 |
+|---|---|---|
+| `main` | 운영(릴리스) 기준 브랜치. 직접 push 금지 | — |
+| `dev` | 일반 개발/통합용. 평소 작업의 기본 브랜치 | `main` |
+| `feat` | 신규 기능 작업 | `dev` 또는 `main` |
+| `hotfix` | 운영 긴급 패치 | `main` (필요 시 `dev`에도 백포팅) |
+
+### 작업 흐름
+```bash
+# 1) 작업할 고정 브랜치로 이동
+git checkout feat            # 신규 기능
+git pull --ff-only origin feat
+
+# 2) 작업 후 커밋 → push
+git add ...
+git commit -m "feat(...): ..."
+git push origin feat
+
+# 3) GitHub 에서 feat → main (또는 dev) 로 PR 생성
+#    PR 본문은 .github/PULL_REQUEST_TEMPLATE.md 양식에 맞춰 작성
+```
+
+> 임시 `chore/*`, `feature/*`, `fix/*` 등의 **일회성 브랜치는 만들지 않습니다**. PR도 위 4개 브랜치 중 하나에서 발사합니다.
+
 ## 배포
 TBD (INFRA-001 / INFRA-004 spec 참조).
