@@ -4,12 +4,14 @@ import kr.farmily.api.ai.domain.ContentJob;
 import kr.farmily.api.ai.domain.JobStatus;
 import kr.farmily.api.ai.dto.RegenerateRequest;
 import kr.farmily.api.ai.dto.RegenerateResponse;
+import kr.farmily.api.ai.event.AiJobCreatedEvent;
 import kr.farmily.api.ai.repository.ContentJobRepository;
 import kr.farmily.api.common.exception.BusinessException;
 import kr.farmily.api.common.exception.ErrorCode;
 import kr.farmily.api.common.upload.PhotoKeyValidator;
 import kr.farmily.api.subscription.service.CreditService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +27,7 @@ public class AiRegenerateService {
     private final ContentJobRepository jobRepo;
     private final CreditService creditService;
     private final PhotoKeyValidator photoKeyValidator;
-    private final AiGenerationOrchestrator orchestrator;
+    private final ApplicationEventPublisher events;
 
     @Transactional
     public RegenerateResponse regenerate(long userId, long jobId, RegenerateRequest req) {
@@ -52,7 +54,7 @@ public class AiRegenerateService {
                 original.getDiaryIds(), keywords, extra, charged, rootId
         ));
 
-        orchestrator.run(newJob.getId(), idemKey);
+        events.publishEvent(new AiJobCreatedEvent(newJob.getId(), idemKey));
 
         int freeRemaining = Math.max(0, FREE_LIMIT - (int) count - 1);
         return new RegenerateResponse(
