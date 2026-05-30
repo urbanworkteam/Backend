@@ -46,6 +46,13 @@ farmily:
     secret: ${JWT_SECRET}
     access-ttl-seconds: ${JWT_ACCESS_TTL_SECONDS:900}
     refresh-ttl-seconds: ${JWT_REFRESH_TTL_SECONDS:2592000}
+  auth:
+    dev-master:
+      enabled: ${AUTH_DEV_MASTER_ENABLED:false}
+      code: ${AUTH_DEV_MASTER_CODE:DEV_MASTER}
+      kakao-id: ${AUTH_DEV_MASTER_KAKAO_ID:dev-master-1}
+      nickname: ${AUTH_DEV_MASTER_NICKNAME:DevMaster}
+      email: ${AUTH_DEV_MASTER_EMAIL:dev-master@local}
   kakao:
     client-id: ${KAKAO_CLIENT_ID:}
     client-secret: ${KAKAO_CLIENT_SECRET:}

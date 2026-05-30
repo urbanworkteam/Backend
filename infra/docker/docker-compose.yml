@@ -54,6 +54,8 @@ services:
       SPRING_DATASOURCE_PASSWORD: farmily
       SPRING_JPA_HIBERNATE_DDL_AUTO: none
       JWT_SECRET: local-dev-secret-please-change-this-to-at-least-32-bytes-random
+      AUTH_DEV_MASTER_ENABLED: "true"
+      AUTH_DEV_MASTER_CODE: DEV_MASTER
     ports:
       - "8080:8080"
 
