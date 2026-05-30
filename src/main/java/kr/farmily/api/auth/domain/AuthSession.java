@@ -26,7 +26,7 @@ public class AuthSession {
     @Column(name = "user_agent")
     private String userAgent;
 
-    @Column(columnDefinition = "inet")
+    @Column(length = 64)
     private String ip;
 
     @Column(name = "issued_at", nullable = false)
