@@ -15,9 +15,19 @@ public interface PaymentRepository extends JpaRepository<Payment, Long> {
     Optional<Payment> findByMerchantUid(String merchantUid);
 
     @Query("SELECT p FROM Payment p WHERE p.userId = :userId " +
-            "AND (:cursorAt IS NULL OR p.paidAt < :cursorAt) " +
             "ORDER BY p.paidAt DESC, p.id DESC")
-    List<Payment> findHistoryPage(@Param("userId") Long userId,
-                                  @Param("cursorAt") OffsetDateTime cursorAt,
-                                  Pageable pageable);
+    List<Payment> findHistoryFirstPage(@Param("userId") Long userId, Pageable pageable);
+
+    @Query("SELECT p FROM Payment p WHERE p.userId = :userId " +
+            "AND p.paidAt < :cursorAt " +
+            "ORDER BY p.paidAt DESC, p.id DESC")
+    List<Payment> findHistoryAfter(@Param("userId") Long userId,
+                                   @Param("cursorAt") OffsetDateTime cursorAt,
+                                   Pageable pageable);
+
+    default List<Payment> findHistoryPage(Long userId, OffsetDateTime cursorAt, Pageable pageable) {
+        return cursorAt == null
+                ? findHistoryFirstPage(userId, pageable)
+                : findHistoryAfter(userId, cursorAt, pageable);
+    }
 }

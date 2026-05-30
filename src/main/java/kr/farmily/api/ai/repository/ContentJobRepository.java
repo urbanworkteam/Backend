@@ -17,14 +17,49 @@ public interface ContentJobRepository extends JpaRepository<ContentJob, Long> {
     Optional<ContentJob> findByIdAndUserId(Long id, Long userId);
 
     @Query("SELECT j FROM ContentJob j WHERE j.userId = :userId AND j.status <> :failed " +
-            "AND (:platform IS NULL OR j.platform = :platform) " +
-            "AND (:cursorAt IS NULL OR j.createdAt < :cursorAt) " +
             "ORDER BY j.createdAt DESC, j.id DESC")
-    List<ContentJob> findHistoryPage(@Param("userId") Long userId,
-                                     @Param("platform") Platform platform,
-                                     @Param("cursorAt") OffsetDateTime cursorAt,
-                                     @Param("failed") JobStatus failed,
-                                     Pageable pageable);
+    List<ContentJob> findHistoryFirstPage(@Param("userId") Long userId,
+                                          @Param("failed") JobStatus failed,
+                                          Pageable pageable);
+
+    @Query("SELECT j FROM ContentJob j WHERE j.userId = :userId AND j.status <> :failed " +
+            "AND j.platform = :platform " +
+            "ORDER BY j.createdAt DESC, j.id DESC")
+    List<ContentJob> findHistoryFirstPageByPlatform(@Param("userId") Long userId,
+                                                    @Param("platform") Platform platform,
+                                                    @Param("failed") JobStatus failed,
+                                                    Pageable pageable);
+
+    @Query("SELECT j FROM ContentJob j WHERE j.userId = :userId AND j.status <> :failed " +
+            "AND j.createdAt < :cursorAt " +
+            "ORDER BY j.createdAt DESC, j.id DESC")
+    List<ContentJob> findHistoryAfter(@Param("userId") Long userId,
+                                      @Param("cursorAt") OffsetDateTime cursorAt,
+                                      @Param("failed") JobStatus failed,
+                                      Pageable pageable);
+
+    @Query("SELECT j FROM ContentJob j WHERE j.userId = :userId AND j.status <> :failed " +
+            "AND j.platform = :platform " +
+            "AND j.createdAt < :cursorAt " +
+            "ORDER BY j.createdAt DESC, j.id DESC")
+    List<ContentJob> findHistoryAfterByPlatform(@Param("userId") Long userId,
+                                                @Param("platform") Platform platform,
+                                                @Param("cursorAt") OffsetDateTime cursorAt,
+                                                @Param("failed") JobStatus failed,
+                                                Pageable pageable);
+
+    default List<ContentJob> findHistoryPage(Long userId, Platform platform,
+                                             OffsetDateTime cursorAt, JobStatus failed,
+                                             Pageable pageable) {
+        if (cursorAt == null) {
+            return platform == null
+                    ? findHistoryFirstPage(userId, failed, pageable)
+                    : findHistoryFirstPageByPlatform(userId, platform, failed, pageable);
+        }
+        return platform == null
+                ? findHistoryAfter(userId, cursorAt, failed, pageable)
+                : findHistoryAfterByPlatform(userId, platform, cursorAt, failed, pageable);
+    }
 
     @Query("SELECT count(j) FROM ContentJob j WHERE j.userId = :userId " +
             "AND COALESCE(j.regeneratedFrom, j.id) = :rootId AND j.id <> :rootId " +
