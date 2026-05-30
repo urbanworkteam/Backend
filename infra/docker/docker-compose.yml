@@ -52,6 +52,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/farmily
       SPRING_DATASOURCE_USERNAME: farmily
       SPRING_DATASOURCE_PASSWORD: farmily
+      SPRING_JPA_HIBERNATE_DDL_AUTO: none
       JWT_SECRET: local-dev-secret-please-change-this-to-at-least-32-bytes-random
     ports:
       - "8080:8080"

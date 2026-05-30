@@ -1,12 +1,11 @@
 package kr.farmily.api.ai.domain;
 
-import io.hypersistence.utils.hibernate.type.array.LongArrayType;
-import io.hypersistence.utils.hibernate.type.array.StringArrayType;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.Type;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 
@@ -30,13 +29,13 @@ public class ContentJob {
     @Column(name = "crop_id", nullable = false)
     private Long cropId;
 
-    @Type(LongArrayType.class)
+    @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "diary_ids", columnDefinition = "bigint[]")
     private Long[] diaryIds;
 
     private String keywords;
 
-    @Type(StringArrayType.class)
+    @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "extra_photo_keys", columnDefinition = "text[]")
     private String[] extraPhotoKeys;
 

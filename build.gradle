@@ -23,6 +23,8 @@ ext {
 	jjwtVersion = '0.12.6'
 	springdocVersion = '2.7.0'
 	awsSdkVersion = '2.30.0'
+	lombokVersion = '1.18.46'
+	hypersistenceUtilsVersion = '3.15.2'
 }
 
 dependencyManagement {
@@ -40,6 +42,7 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-validation'
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux' // WebClient for KMA/Kakao REST
+	implementation 'org.springframework.boot:spring-boot-starter-json'    // ObjectMapper / Jackson auto-config
 
 	// DB
 	implementation 'org.flywaydb:flyway-database-postgresql'
@@ -64,12 +67,11 @@ dependencies {
 	// Firebase Admin (FCM)
 	implementation 'com.google.firebase:firebase-admin:9.4.3'
 
-	// JSON-B (jsonb 컬럼 매핑용)
-	implementation 'io.hypersistence:hypersistence-utils-hibernate-63:3.9.4'
+	// JSON-B (jsonb 컬럼 매핑용) — Hibernate 7.x 네이티브 @JdbcTypeCode(SqlTypes.JSON/ARRAY) 사용 (hypersistence-utils 제거)
 
-	// Lombok
-	compileOnly 'org.projectlombok:lombok'
-	annotationProcessor 'org.projectlombok:lombok'
+	// Lombok — Java 21 호환 버전 명시 고정
+	compileOnly "org.projectlombok:lombok:${lombokVersion}"
+	annotationProcessor "org.projectlombok:lombok:${lombokVersion}"
 
 	// Test
 	testImplementation 'org.springframework.boot:spring-boot-starter-actuator-test'
@@ -78,9 +80,9 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-security-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-validation-test'
 	testImplementation 'org.springframework.boot:spring-boot-starter-webmvc-test'
-	testCompileOnly 'org.projectlombok:lombok'
+	testCompileOnly "org.projectlombok:lombok:${lombokVersion}"
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
-	testAnnotationProcessor 'org.projectlombok:lombok'
+	testAnnotationProcessor "org.projectlombok:lombok:${lombokVersion}"
 	testAnnotationProcessor "org.mapstruct:mapstruct-processor:${mapstructVersion}"
 }
 

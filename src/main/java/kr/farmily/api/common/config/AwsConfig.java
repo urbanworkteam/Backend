@@ -9,6 +9,7 @@ import software.amazon.awssdk.auth.credentials.StaticCredentialsProvider;
 import software.amazon.awssdk.regions.Region;
 import software.amazon.awssdk.services.bedrockagentruntime.BedrockAgentRuntimeAsyncClient;
 import software.amazon.awssdk.services.s3.S3Client;
+import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 
 import java.net.URI;
@@ -29,7 +30,7 @@ public class AwsConfig {
 
     @Bean
     public S3Client s3Client(S3Properties props) {
-        S3Client.Builder builder = S3Client.builder()
+        S3ClientBuilder builder = S3Client.builder()
                 .region(Region.of(props.region() != null ? props.region() : "ap-northeast-2"));
         if (props.endpoint() != null && !props.endpoint().isBlank()) {
             builder.endpointOverride(URI.create(props.endpoint()));

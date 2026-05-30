@@ -7,12 +7,10 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import software.amazon.awssdk.services.bedrockagentruntime.BedrockAgentRuntimeAsyncClient;
-import software.amazon.awssdk.services.bedrockagentruntime.model.InvokeAgentRequest;
 
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -23,39 +21,13 @@ public class BedrockAgentClient {
     private final AiProperties props;
 
     public Result invoke(ContentJob job, String diarySummary) {
-        if ("mock".equalsIgnoreCase(props.provider())) {
-            return mock(job);
+        // TODO: Action Group 응답 파싱 — 실제 Bedrock 응답 스트림 처리는 INFRA-002/003 완료 후 구현.
+        // 현재는 provider 값과 무관하게 mock 결과 반환 (SDK 비동기 스트림 핸들러 구현 전).
+        if (!"mock".equalsIgnoreCase(props.provider())) {
+            log.debug("Bedrock provider={} 이지만 응답 스트림 핸들러 미구현 → mock 반환 (bedrock client present={}, summaryLen={})",
+                    props.provider(), bedrock != null, diarySummary == null ? 0 : diarySummary.length());
         }
-        try {
-            String input = """
-                    플랫폼: %s
-                    크롭 id: %d
-                    키워드: %s
-                    영농일지 요약:
-                    %s
-                    추가 사진: %d장
-                    """.formatted(
-                    job.getPlatform(), job.getCropId(),
-                    job.getKeywords() != null ? job.getKeywords() : "",
-                    diarySummary,
-                    job.getExtraPhotoKeys() == null ? 0 : job.getExtraPhotoKeys().length);
-
-            InvokeAgentRequest req = InvokeAgentRequest.builder()
-                    .agentId(props.bedrockAgentId())
-                    .agentAliasId(props.bedrockAgentAliasId())
-                    .sessionId("job-" + job.getId())
-                    .inputText(input)
-                    .build();
-
-            bedrock.invokeAgent(req, b -> b.subscriber(part -> {}))
-                    .get(props.invokeTimeoutSeconds() != null ? props.invokeTimeoutSeconds() : 120, TimeUnit.SECONDS);
-
-            // TODO: Action Group 응답 파싱 — 실제 Bedrock 응답 스트림 처리는 INFRA-002/003 완료 후 구현.
-            return mock(job);
-        } catch (Exception e) {
-            log.warn("Bedrock invoke 실패, mock 반환: {}", e.getMessage());
-            return mock(job);
-        }
+        return mock(job);
     }
 
     private Result mock(ContentJob job) {
