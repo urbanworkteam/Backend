@@ -50,3 +50,15 @@ src/main/resources/*.p8
 logs/
 *.log
 
+### Docs (local only) ###
+docs/
+
+### Claude Code local state ###
+.claude/
+
+### Local helper scripts (don't commit) ###
+.test-endpoints.sh
+.gen-compile-fixes-pdf.py
+.pr-bodies-tmp/
+.pr-body-*.md
+

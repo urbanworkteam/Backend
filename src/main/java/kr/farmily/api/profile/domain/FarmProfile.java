@@ -1,11 +1,11 @@
 package kr.farmily.api.profile.domain;
 
-import io.hypersistence.utils.hibernate.type.array.StringArrayType;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
-import org.hibernate.annotations.Type;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
 
 import java.time.OffsetDateTime;
 
@@ -36,7 +36,7 @@ public class FarmProfile {
     @Column(name = "story_text")
     private String storyText;
 
-    @Type(StringArrayType.class)
+    @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(name = "story_image_keys", columnDefinition = "text[]")
     private String[] storyImageKeys;
 
