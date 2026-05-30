@@ -1,5 +1,6 @@
 package kr.farmily.api.common.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import software.amazon.awssdk.auth.credentials.AwsBasicCredentials;
@@ -39,7 +40,7 @@ public class AwsConfig {
 
     @Bean
     public BedrockAgentRuntimeAsyncClient bedrockAgentRuntimeAsyncClient(
-            org.springframework.beans.factory.annotation.Value("${farmily.ai.aws-region:us-west-2}") String region) {
+            @Value("${farmily.ai.aws-region:us-west-2}") String region) {
         return BedrockAgentRuntimeAsyncClient.builder()
                 .region(Region.of(region))
                 .credentialsProvider(DefaultCredentialsProvider.create())

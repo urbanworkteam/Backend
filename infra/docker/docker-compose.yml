@@ -10,6 +10,11 @@ services:
       - "5432:5432"
     volumes:
       - farmily-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U farmily -d farmily"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
@@ -29,6 +34,27 @@ services:
     command: server /data --console-address ":9001"
     volumes:
       - farmily-minio:/data
+
+  backend:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile
+    container_name: farmily-backend
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      minio:
+        condition: service_started
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/farmily
+      SPRING_DATASOURCE_USERNAME: farmily
+      SPRING_DATASOURCE_PASSWORD: farmily
+      JWT_SECRET: local-dev-secret-please-change-this-to-at-least-32-bytes-random
+    ports:
+      - "8080:8080"
 
 volumes:
   farmily-pg:
