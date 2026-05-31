@@ -13,9 +13,8 @@ farmily:
   kakao:
     client-id: ""
     client-secret: ""
-    redirect-uri: http://localhost:8080/auth/kakao/callback
+    redirect-uri: http://localhost:3000/oauth/kakao
     admin-key: ""
-    local-rest-key: ""
   s3:
     bucket: farmily-local
     region: ap-northeast-2

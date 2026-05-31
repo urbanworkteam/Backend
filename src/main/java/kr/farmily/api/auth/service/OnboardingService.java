@@ -76,7 +76,11 @@ public class OnboardingService {
         }
 
         FarmLocation loc = farmLocationService.create(userId,
-                new FarmLocationRequest(req.farmLocation().label(), req.farmLocation().address()));
+                new FarmLocationRequest(
+                        req.farmLocation().label(),
+                        req.farmLocation().address(),
+                        req.farmLocation().lat(),
+                        req.farmLocation().lng()));
 
         return new OnboardingResponse(
                 new OnboardingResponse.UserSummary(user.getId(), user.getName(), user.getHandle()),
