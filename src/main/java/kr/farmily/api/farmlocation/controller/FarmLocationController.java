@@ -29,7 +29,7 @@ public class FarmLocationController {
     }
 
     @PostMapping
-    @Operation(summary = "농장 위치 등록 (지오코딩 자동)")
+    @Operation(summary = "농장 위치 등록 (lat/lng 직접 전달, 서버에서 KMA 격자 자동 계산)")
     public ApiResponse<FarmLocationResponse> create(CurrentUser user, @Valid @RequestBody FarmLocationRequest req) {
         return ApiResponse.ok(FarmLocationResponse.from(service.create(user.id(), req)));
     }

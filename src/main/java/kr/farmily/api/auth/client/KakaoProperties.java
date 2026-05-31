@@ -7,6 +7,5 @@ public record KakaoProperties(
         String clientId,
         String clientSecret,
         String redirectUri,
-        String adminKey,
-        String localRestKey
+        String adminKey
 ) {}
