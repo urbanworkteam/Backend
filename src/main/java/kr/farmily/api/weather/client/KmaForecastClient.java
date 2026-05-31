@@ -77,6 +77,7 @@ public class KmaForecastClient {
         String target = targetDate.format(DateTimeFormatter.BASIC_ISO_DATE);
         Map<String, String> byCategory = new HashMap<>();
         BigDecimal tempMax = null, tempMin = null;
+        BigDecimal tmpMax = null, tmpMin = null;
         BigDecimal precipitation = BigDecimal.ZERO;
         Integer humidity = null;
         String sky = null;
@@ -90,6 +91,13 @@ public class KmaForecastClient {
             switch (cat) {
                 case "TMX" -> tempMax = parseDecimal(v);
                 case "TMN" -> tempMin = parseDecimal(v);
+                case "TMP" -> {
+                    BigDecimal t = parseDecimal(v);
+                    if (t != null) {
+                        if (tmpMax == null || t.compareTo(tmpMax) > 0) tmpMax = t;
+                        if (tmpMin == null || t.compareTo(tmpMin) < 0) tmpMin = t;
+                    }
+                }
                 case "REH" -> humidity = parseInt(v);
                 case "SKY" -> { if (sky == null) sky = v; }
                 case "PTY" -> { if (pty == null) pty = v; }
@@ -100,6 +108,9 @@ public class KmaForecastClient {
                 default -> {}
             }
         }
+        // TMX/TMN 이 발표되지 않은 base_time 의 경우 (오후/저녁 호출) TMP 시간별 값에서 폴백
+        if (tempMax == null) tempMax = tmpMax;
+        if (tempMin == null) tempMin = tmpMin;
         String main = mainOf(sky, pty);
         return WeatherSnapshot.kma(main, tempMax, tempMin, precipitation, humidity);
     }
