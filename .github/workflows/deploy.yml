@@ -1,5 +1,5 @@
 # Backend CI/CD — 현재 실행 가능 범위 (test + ECR push)
-# feat push → dev 태그, main push → prod 태그 / 이미지 태그 {env}-<short-sha>
+# feat push → farmily-api-dev / main push → farmily-api (env별 ECR 레포 분리) / 이미지 태그 {env}-<short-sha>
 #
 # 현재 작성 범위: ci(gradle test + SonarCloud) + push-image(build → ECR push).
 # 아래는 전제조건 충족 후 추가 (지금은 미포함):
@@ -21,7 +21,7 @@ permissions:
 
 env:
   AWS_REGION: ap-northeast-2
-  ECR_REPOSITORY: farmily-api
+  # ECR 레포는 env별 분리 → push-image의 meta 단계에서 결정 (prod=farmily-api / dev=farmily-api-dev)
 
 jobs:
   # ─── Job 1: CI (테스트) ───  PR·push 공통
@@ -57,12 +57,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set target env & image tag   # main=prod, feat=dev / 태그=<env>-<short-sha>
+      - name: Set target env, repo & image tag   # main=prod/farmily-api, feat=dev/farmily-api-dev
         id: meta
         run: |
-          if [ "${{ github.ref_name }}" = "main" ]; then TARGET=prod; else TARGET=dev; fi
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            TARGET=prod; REPO=farmily-api
+          else
+            TARGET=dev;  REPO=farmily-api-dev
+          fi
           echo "image_tag=$TARGET-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
           echo "target=$TARGET" >> "$GITHUB_OUTPUT"
+          echo "repo=$REPO" >> "$GITHUB_OUTPUT"
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a  # v4.3.1 (SHA 핀: 공급망 공격 방지)
@@ -79,8 +84,9 @@ jobs:
           REGISTRY: ${{ steps.ecr-login.outputs.registry }}
           IMAGE_TAG: ${{ steps.meta.outputs.image_tag }}
           TARGET: ${{ steps.meta.outputs.target }}
+          REPO: ${{ steps.meta.outputs.repo }}
         run: |
-          IMAGE="$REGISTRY/$ECR_REPOSITORY"
+          IMAGE="$REGISTRY/$REPO"
           docker build -f infra/docker/Dockerfile -t "$IMAGE:$IMAGE_TAG" .
           docker push "$IMAGE:$IMAGE_TAG"
           # prod는 '현재 운영' 포인터로 latest도 갱신
