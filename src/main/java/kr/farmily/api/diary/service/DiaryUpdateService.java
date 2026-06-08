@@ -1,10 +1,10 @@
 package kr.farmily.api.diary.service;
 
 import jakarta.persistence.EntityManager;
-import kr.farmily.api.common.config.S3Properties;
 import kr.farmily.api.common.exception.BusinessException;
 import kr.farmily.api.common.exception.ErrorCode;
 import kr.farmily.api.common.upload.PhotoKeyValidator;
+import kr.farmily.api.common.upload.S3Service;
 import kr.farmily.api.crop.domain.Crop;
 import kr.farmily.api.crop.service.CropService;
 import kr.farmily.api.diary.domain.FarmDiary;
@@ -30,7 +30,7 @@ public class DiaryUpdateService {
     private final CropService cropService;
     private final WeatherService weatherService;
     private final PhotoKeyValidator photoKeyValidator;
-    private final S3Properties s3Properties;
+    private final S3Service s3Service;
     private final EntityManager em;
 
     @Transactional
@@ -74,6 +74,6 @@ public class DiaryUpdateService {
                     "해당 농장·날짜에 이미 일지가 존재합니다", "date");
         }
 
-        return DiaryResponse.from(d, location, crop, s3Properties.cdnBaseUrl());
+        return DiaryResponse.from(d, location, crop, s3Service::toDisplayUrl);
     }
 }

@@ -66,6 +66,7 @@ farmily:
     secret-key: ${S3_SECRET_KEY:}
     cdn-base-url: ${CDN_BASE_URL:}
     presign-ttl-seconds: 300
+    display-ttl-seconds: 3600
   kma:
     service-key: ${KMA_SERVICE_KEY:}
     base-url: ${KMA_BASE_URL:https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0}

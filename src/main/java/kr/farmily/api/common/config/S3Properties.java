@@ -10,5 +10,6 @@ public record S3Properties(
         String accessKey,
         String secretKey,
         String cdnBaseUrl,
-        Long presignTtlSeconds
+        Long presignTtlSeconds,
+        Long displayTtlSeconds
 ) {}

@@ -1,6 +1,5 @@
 package kr.farmily.api.profile.service;
 
-import kr.farmily.api.common.config.S3Properties;
 import kr.farmily.api.common.exception.BusinessException;
 import kr.farmily.api.common.exception.ErrorCode;
 import kr.farmily.api.profile.domain.BlockType;
@@ -11,6 +10,7 @@ import kr.farmily.api.profile.dto.MyProfileResponse;
 import kr.farmily.api.profile.repository.FarmProfileRepository;
 import kr.farmily.api.profile.repository.ProfileBlockRepository;
 import kr.farmily.api.profile.repository.SalesChannelRepository;
+import kr.farmily.api.common.upload.S3Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -25,7 +25,7 @@ public class ProfileService {
     private final FarmProfileRepository profileRepository;
     private final ProfileBlockRepository blockRepository;
     private final SalesChannelRepository channelRepository;
-    private final S3Properties s3Properties;
+    private final S3Service s3Service;
 
     @Transactional
     public MyProfileResponse getMyProfile(long userId) {
@@ -44,13 +44,13 @@ public class ProfileService {
                         profile.getFarmName(),
                         profile.getRegion(),
                         profile.getFarmingMethod(),
-                        toCdnUrl(profile.getBackgroundImageKey()),
-                        toCdnUrl(profile.getAvatarImageKey()),
+                        s3Service.toDisplayUrl(profile.getBackgroundImageKey()),
+                        s3Service.toDisplayUrl(profile.getAvatarImageKey()),
                         new MyProfileResponse.Story(
                                 profile.getStoryText(),
                                 profile.getStoryImageKeys() == null ? List.of()
-                                        : List.of(profile.getStoryImageKeys()).stream().map(this::toCdnUrl).toList(),
-                                toCdnUrl(profile.getStoryVideoKey())
+                                        : List.of(profile.getStoryImageKeys()).stream().map(s3Service::toDisplayUrl).toList(),
+                                s3Service.toDisplayUrl(profile.getStoryVideoKey())
                         )
                 ),
                 channels.stream().map(c -> new MyProfileResponse.SalesChannelDto(c.getId(), c.getChannel(), c.getUrl())).toList(),
@@ -70,11 +70,5 @@ public class ProfileService {
                 ProfileBlock.create(userId, BlockType.TEXT, 4, false, new HashMap<>(java.util.Map.of("body", "")))
         );
         return blockRepository.saveAll(seeds);
-    }
-
-    public String toCdnUrl(String key) {
-        if (key == null || key.isBlank()) return null;
-        if (s3Properties.cdnBaseUrl() == null || s3Properties.cdnBaseUrl().isBlank()) return key;
-        return s3Properties.cdnBaseUrl().replaceAll("/$", "") + "/" + key;
     }
 }

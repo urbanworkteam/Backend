@@ -4,8 +4,10 @@ import kr.farmily.api.common.config.S3Properties;
 import kr.farmily.api.common.upload.dto.PresignResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import software.amazon.awssdk.services.s3.presigner.model.GetObjectPresignRequest;
 import software.amazon.awssdk.services.s3.presigner.model.PutObjectPresignRequest;
 
 import java.time.Duration;
@@ -31,9 +33,33 @@ public class S3Service {
                 .putObjectRequest(put)
                 .build();
         String url = presigner.presignPutObject(req).url().toString();
-        String publicUrl = (props.cdnBaseUrl() != null && !props.cdnBaseUrl().isBlank())
-                ? props.cdnBaseUrl().replaceAll("/$", "") + "/" + key
-                : url;
-        return new PresignResponse(url, key, publicUrl, ttl.toSeconds());
+        return new PresignResponse(url, key, toDisplayUrl(key), ttl.toSeconds());
+    }
+
+    /**
+     * 업로드 버킷의 객체를 브라우저가 직접 받을 수 있는 presigned GET URL.
+     * 버킷은 완전 비공개라 이 서명 URL로만 접근 가능하며 ttl 후 만료된다.
+     */
+    public String presignGet(String key, Duration ttl) {
+        GetObjectRequest get = GetObjectRequest.builder()
+                .bucket(props.bucket())
+                .key(key)
+                .build();
+        GetObjectPresignRequest req = GetObjectPresignRequest.builder()
+                .signatureDuration(ttl)
+                .getObjectRequest(get)
+                .build();
+        return presigner.presignGetObject(req).url().toString();
+    }
+
+    /**
+     * key -> 화면 표시용 URL 변환의 단일 출처.
+     * 현재 구현은 업로드 버킷 presigned GET(표시용 TTL). 추후 업로드 버킷 전용 CDN으로
+     * 승격 시 이 메서드 구현만 교체하면 모든 호출부가 그대로 따라온다.
+     */
+    public String toDisplayUrl(String key) {
+        if (key == null || key.isBlank()) return null;
+        long ttl = props.displayTtlSeconds() != null ? props.displayTtlSeconds() : 3600L;
+        return presignGet(key, Duration.ofSeconds(ttl));
     }
 }
