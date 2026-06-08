@@ -1,7 +1,6 @@
 package kr.farmily.api.diary.dto;
 
 import kr.farmily.api.crop.domain.Crop;
-import kr.farmily.api.diary.domain.DiaryPhoto;
 import kr.farmily.api.diary.domain.DiaryWorkBlock;
 import kr.farmily.api.diary.domain.FarmDiary;
 import kr.farmily.api.diary.domain.WorkType;
@@ -11,6 +10,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.util.List;
+import java.util.function.Function;
 
 public record DiaryResponse(
         Long id,
@@ -36,7 +36,7 @@ public record DiaryResponse(
 
     public record PhotoDto(Long id, String url, String s3Key, Integer sortOrder) {}
 
-    public static DiaryResponse from(FarmDiary d, FarmLocation loc, Crop crop, String cdnBase) {
+    public static DiaryResponse from(FarmDiary d, FarmLocation loc, Crop crop, Function<String, String> toUrl) {
         WeatherDto w = new WeatherDto(
                 d.getWeather() == null ? null : d.getWeather().getMain(),
                 d.getWeather() == null ? null : d.getWeather().getTempMax(),
@@ -49,7 +49,7 @@ public record DiaryResponse(
                 .map(b -> new WorkBlockDto(b.getId(), b.getWorkType(), b.getDetail(), b.getSortOrder()))
                 .toList();
         List<PhotoDto> photos = d.getPhotos().stream()
-                .map(p -> new PhotoDto(p.getId(), toUrl(cdnBase, p), p.getS3Key(), p.getSortOrder()))
+                .map(p -> new PhotoDto(p.getId(), toUrl.apply(p.getS3Key()), p.getS3Key(), p.getSortOrder()))
                 .toList();
         return new DiaryResponse(
                 d.getId(),
@@ -63,10 +63,5 @@ public record DiaryResponse(
                 d.getCreatedAt(),
                 d.getUpdatedAt()
         );
-    }
-
-    private static String toUrl(String cdnBase, DiaryPhoto p) {
-        if (cdnBase == null || cdnBase.isBlank()) return p.getS3Key();
-        return cdnBase.replaceAll("/$", "") + "/" + p.getS3Key();
     }
 }

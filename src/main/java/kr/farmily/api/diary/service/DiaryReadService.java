@@ -1,8 +1,8 @@
 package kr.farmily.api.diary.service;
 
-import kr.farmily.api.common.config.S3Properties;
 import kr.farmily.api.common.exception.BusinessException;
 import kr.farmily.api.common.exception.ErrorCode;
+import kr.farmily.api.common.upload.S3Service;
 import kr.farmily.api.crop.domain.Crop;
 import kr.farmily.api.crop.repository.CropRepository;
 import kr.farmily.api.diary.domain.FarmDiary;
@@ -23,7 +23,7 @@ public class DiaryReadService {
     private final FarmDiaryRepository diaryRepository;
     private final CropRepository cropRepository;
     private final FarmLocationRepository farmLocationRepository;
-    private final S3Properties s3Properties;
+    private final S3Service s3Service;
 
     @Transactional(readOnly = true)
     public DiaryResponse findById(long userId, long id) {
@@ -31,7 +31,7 @@ public class DiaryReadService {
         Crop crop = cropRepository.findById(d.getCropId()).orElse(null);
         FarmLocation loc = d.getFarmLocationId() != null
                 ? farmLocationRepository.findById(d.getFarmLocationId()).orElse(null) : null;
-        return DiaryResponse.from(d, loc, crop, s3Properties.cdnBaseUrl());
+        return DiaryResponse.from(d, loc, crop, s3Service::toDisplayUrl);
     }
 
     @Transactional(readOnly = true)

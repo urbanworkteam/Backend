@@ -2,6 +2,7 @@ package kr.farmily.api.profile.service;
 
 import kr.farmily.api.common.exception.BusinessException;
 import kr.farmily.api.common.exception.ErrorCode;
+import kr.farmily.api.common.upload.S3Service;
 import kr.farmily.api.profile.domain.FarmProfile;
 import kr.farmily.api.profile.domain.ProfileBlock;
 import kr.farmily.api.profile.domain.SalesChannel;
@@ -25,7 +26,7 @@ public class PublicProfileService {
     private final FarmProfileRepository profileRepository;
     private final ProfileBlockRepository blockRepository;
     private final SalesChannelRepository channelRepository;
-    private final ProfileService profileService;
+    private final S3Service s3Service;
 
     @Transactional(readOnly = true)
     public PublicProfileResponse findByHandle(String handle) {
@@ -45,13 +46,13 @@ public class PublicProfileService {
                 user.getHandle(),
                 new PublicProfileResponse.FarmHeader(
                         profile.getFarmName(), profile.getRegion(), profile.getFarmingMethod(),
-                        profileService.toCdnUrl(profile.getBackgroundImageKey()),
-                        profileService.toCdnUrl(profile.getAvatarImageKey()),
+                        s3Service.toDisplayUrl(profile.getBackgroundImageKey()),
+                        s3Service.toDisplayUrl(profile.getAvatarImageKey()),
                         new PublicProfileResponse.Story(
                                 profile.getStoryText(),
                                 profile.getStoryImageKeys() == null ? List.of()
-                                        : List.of(profile.getStoryImageKeys()).stream().map(profileService::toCdnUrl).toList(),
-                                profileService.toCdnUrl(profile.getStoryVideoKey())
+                                        : List.of(profile.getStoryImageKeys()).stream().map(s3Service::toDisplayUrl).toList(),
+                                s3Service.toDisplayUrl(profile.getStoryVideoKey())
                         )
                 ),
                 channels.stream().map(c -> new PublicProfileResponse.SalesChannelDto(c.getChannel(), c.getUrl())).toList(),

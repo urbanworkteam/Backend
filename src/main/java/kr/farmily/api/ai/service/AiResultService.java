@@ -9,9 +9,9 @@ import kr.farmily.api.ai.dto.JobStatusResponse;
 import kr.farmily.api.ai.dto.UpdateResultRequest;
 import kr.farmily.api.ai.repository.ContentJobRepository;
 import kr.farmily.api.ai.repository.ContentResultRepository;
-import kr.farmily.api.common.config.S3Properties;
 import kr.farmily.api.common.exception.BusinessException;
 import kr.farmily.api.common.exception.ErrorCode;
+import kr.farmily.api.common.upload.S3Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,7 +27,7 @@ public class AiResultService {
 
     private final ContentJobRepository jobRepo;
     private final ContentResultRepository resultRepo;
-    private final S3Properties s3Properties;
+    private final S3Service s3Service;
 
     @Transactional(readOnly = true)
     public JobStatusResponse status(long userId, long jobId) {
@@ -56,7 +56,7 @@ public class AiResultService {
         ContentResult r = resultRepo.findById(jobId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.NOT_FOUND, "결과를 찾을 수 없습니다"));
 
-        List<String> urls = Arrays.stream(r.getCardImageKeys()).map(this::toCdnUrl).toList();
+        List<String> urls = Arrays.stream(r.getCardImageKeys()).map(s3Service::toDisplayUrl).toList();
         ContentResultResponse.StoreMeta storeMeta = job.getPlatform() == Platform.SMARTSTORE
                 ? extractStoreMeta(r.getMeta()) : null;
         return new ContentResultResponse(job.getPlatform(), urls, r.getCaption(),
@@ -116,10 +116,5 @@ public class AiResultService {
     public ContentJob requireOwner(long userId, long jobId) {
         return jobRepo.findByIdAndUserId(jobId, userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.JOB_NOT_FOUND));
-    }
-
-    private String toCdnUrl(String key) {
-        if (s3Properties.cdnBaseUrl() == null || s3Properties.cdnBaseUrl().isBlank()) return key;
-        return s3Properties.cdnBaseUrl().replaceAll("/$", "") + "/" + key;
     }
 }

@@ -1,9 +1,9 @@
 package kr.farmily.api.diary.service;
 
-import kr.farmily.api.common.config.S3Properties;
 import kr.farmily.api.common.exception.BusinessException;
 import kr.farmily.api.common.exception.ErrorCode;
 import kr.farmily.api.common.response.PageResponse;
+import kr.farmily.api.common.upload.S3Service;
 import kr.farmily.api.crop.domain.Crop;
 import kr.farmily.api.crop.repository.CropRepository;
 import kr.farmily.api.diary.domain.FarmDiary;
@@ -37,7 +37,7 @@ public class DiaryListService {
     private final FarmDiaryRepository diaryRepository;
     private final CropRepository cropRepository;
     private final FarmLocationRepository farmLocationRepository;
-    private final S3Properties s3Properties;
+    private final S3Service s3Service;
 
     @Transactional(readOnly = true)
     public PageResponse<DiaryResponse> listByCrop(long userId, long cropId,
@@ -64,11 +64,10 @@ public class DiaryListService {
         List<FarmDiary> page = hasMore ? rows.subList(0, safeLimit) : rows;
 
         Map<Long, FarmLocation> locations = loadLocations(page);
-        String cdnBase = s3Properties.cdnBaseUrl();
         List<DiaryResponse> data = page.stream()
                 .map(d -> DiaryResponse.from(d,
                         d.getFarmLocationId() == null ? null : locations.get(d.getFarmLocationId()),
-                        crop, cdnBase))
+                        crop, s3Service::toDisplayUrl))
                 .toList();
 
         String next = null;

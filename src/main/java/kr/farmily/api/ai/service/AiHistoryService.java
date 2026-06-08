@@ -7,8 +7,8 @@ import kr.farmily.api.ai.domain.Platform;
 import kr.farmily.api.ai.dto.HistoryItemDto;
 import kr.farmily.api.ai.repository.ContentJobRepository;
 import kr.farmily.api.ai.repository.ContentResultRepository;
-import kr.farmily.api.common.config.S3Properties;
 import kr.farmily.api.common.response.PageResponse;
+import kr.farmily.api.common.upload.S3Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -25,7 +25,7 @@ public class AiHistoryService {
 
     private final ContentJobRepository jobRepo;
     private final ContentResultRepository resultRepo;
-    private final S3Properties s3Properties;
+    private final S3Service s3Service;
 
     @Transactional(readOnly = true)
     public PageResponse<HistoryItemDto> list(long userId, Platform platform, String cursor, int limit) {
@@ -38,7 +38,7 @@ public class AiHistoryService {
         List<HistoryItemDto> data = page.stream().map(j -> {
             ContentResult r = resultRepo.findById(j.getId()).orElse(null);
             String thumb = (r != null && r.getCardImageKeys() != null && r.getCardImageKeys().length > 0)
-                    ? toCdnUrl(r.getCardImageKeys()[0]) : null;
+                    ? s3Service.toDisplayUrl(r.getCardImageKeys()[0]) : null;
             String caption = r != null ? r.getCaption() : null;
             return new HistoryItemDto(j.getId(), j.getPlatform(), j.getCreatedAt(), thumb, caption);
         }).toList();
@@ -59,10 +59,5 @@ public class AiHistoryService {
         } catch (Exception e) {
             return null;
         }
-    }
-
-    private String toCdnUrl(String key) {
-        if (s3Properties.cdnBaseUrl() == null || s3Properties.cdnBaseUrl().isBlank()) return key;
-        return s3Properties.cdnBaseUrl().replaceAll("/$", "") + "/" + key;
     }
 }
