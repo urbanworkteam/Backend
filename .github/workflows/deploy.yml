@@ -4,7 +4,7 @@
 #
 # Jobs:
 #   ci          : gradle test + SonarCloud (PR·push 공통)
-#   push-image  : Docker build → ECR push (push 이벤트만)
+#   push-image  : Buildx build(gha 레이어 캐시) → ECR push (push 이벤트만)
 #   deploy-prod : ECS RegisterTaskDef + UpdateService + wait (main push만)
 #   deploy-dev  : dev 인프라 apply 후 활성화 예정 (현재 주석)
 #
@@ -66,22 +66,10 @@ jobs:
     if: github.event_name == 'push'
     runs-on: ubuntu-latest
     outputs:
-      image: ${{ steps.build-push.outputs.image }}   # deploy-prod에서 사용할 전체 이미지 URI
+      image: ${{ steps.meta.outputs.image }}   # deploy-prod에서 사용할 전체 이미지 URI
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-
-      - name: Set target env, repo & image tag
-        id: meta
-        run: |
-          if [ "${{ github.ref_name }}" = "main" ]; then
-            TARGET=prod; REPO=farmily-api
-          else
-            TARGET=dev;  REPO=farmily-api-dev
-          fi
-          echo "image_tag=$TARGET-${GITHUB_SHA::7}" >> "$GITHUB_OUTPUT"
-          echo "target=$TARGET"                      >> "$GITHUB_OUTPUT"
-          echo "repo=$REPO"                          >> "$GITHUB_OUTPUT"
 
       - name: Configure AWS credentials (OIDC)
         uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a  # v4.3.1
@@ -93,23 +81,48 @@ jobs:
         id: ecr-login
         uses: aws-actions/amazon-ecr-login@fa648b43de3d4d023bcb3f89ed6940096949c419  # v2.1.5
 
-      - name: Build & Push image
-        id: build-push
+      # 레지스트리 주소(ECR 로그인 후 확정)와 합쳐 전체 이미지 URI·태그 목록 산출
+      # main → farmily-api:prod-<sha> + latest / feat → farmily-api-dev:dev-<sha>
+      - name: Set image metadata (repo, tags)
+        id: meta
         env:
-          REGISTRY:  ${{ steps.ecr-login.outputs.registry }}
-          IMAGE_TAG: ${{ steps.meta.outputs.image_tag }}
-          TARGET:    ${{ steps.meta.outputs.target }}
-          REPO:      ${{ steps.meta.outputs.repo }}
+          REGISTRY: ${{ steps.ecr-login.outputs.registry }}
         run: |
-          IMAGE="$REGISTRY/$REPO"
-          docker build -f infra/docker/Dockerfile -t "$IMAGE:$IMAGE_TAG" .
-          docker push "$IMAGE:$IMAGE_TAG"
-          # prod는 '현재 운영' 포인터로 latest도 갱신 (참조용 — 배포는 SHA 태그로만)
-          if [ "$TARGET" = "prod" ]; then
-            docker tag "$IMAGE:$IMAGE_TAG" "$IMAGE:latest"
-            docker push "$IMAGE:latest"
+          if [ "${{ github.ref_name }}" = "main" ]; then
+            REPO=farmily-api;     TARGET=prod
+          else
+            REPO=farmily-api-dev; TARGET=dev
           fi
-          echo "image=$IMAGE:$IMAGE_TAG" >> "$GITHUB_OUTPUT"
+          IMAGE="$REGISTRY/$REPO"
+          TAG="$TARGET-${GITHUB_SHA::7}"
+          # build-push-action은 tags를 줄바꿈으로 다중 지정. prod만 latest(운영 포인터) 추가
+          TAGS="$IMAGE:$TAG"
+          if [ "$TARGET" = "prod" ]; then
+            TAGS=$(printf '%s\n%s' "$IMAGE:$TAG" "$IMAGE:latest")
+          fi
+          {
+            echo "image=$IMAGE:$TAG"
+            echo "tags<<EOF"
+            echo "$TAGS"
+            echo "EOF"
+          } >> "$GITHUB_OUTPUT"
+
+      # BuildKit 활성화 — gha 레이어 캐시(cache-from/to) 사용에 필수
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@d7f5e7f509e45cec5c76c4d5afdd7de93d0b3df5  # v4.1.0
+
+      # A: GitHub Actions 캐시로 빌드 레이어 재사용
+      #   - Gradle 배포본/의존성 레이어가 캐시되어 매 빌드 재다운로드 제거(빌드 단축 + 504 회피)
+      #   - cache-to mode=max: 중간 레이어까지 캐시 / type=gha: 무료 10GB GitHub 호스팅 캐시
+      - name: Build & Push image
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf  # v7.2.0
+        with:
+          context: .
+          file: infra/docker/Dockerfile
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
 
   # ─── Job 3: ECS 배포 (prod) ─── main push만
   deploy-prod:
