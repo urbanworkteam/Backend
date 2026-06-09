@@ -6,7 +6,7 @@
 #   ci          : gradle test + SonarCloud (PR·push 공통)
 #   push-image  : Buildx build(gha 레이어 캐시) → ECR push (push 이벤트만)
 #   deploy-prod : ECS RegisterTaskDef + UpdateService + wait (main push만)
-#   deploy-dev  : dev 인프라 apply 후 활성화 예정 (현재 주석)
+#   deploy-dev  : ECS 자동배포(dev) — feat push만 (dev 인프라 apply 후 가동)
 #
 # 전제: AWS_ROLE_ARN(farmily-cicd-backend-role), SONAR_TOKEN 등록 완료.
 
@@ -175,6 +175,64 @@ jobs:
         with:
           payload: |
             {"text": "❌ prod 배포 실패 — Backend | `${{ github.sha }}` | <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|로그 보기>"}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+  # ─── Job 4: ECS 배포 (dev) ─── feat push만
+  # prod와 동형. 차이: feat 트리거 / dev-app task def / dev-app-service / dev-cluster.
+  # 이미지는 push-image가 feat 브랜치에서 farmily-api-dev:dev-<sha>로 빌드한 것을 그대로 사용.
+  # ⚠️ dev ECS 서비스(dev-app-service)·task def(dev-app)가 apply 완료돼야 동작.
+  deploy-dev:
+    needs: push-image
+    if: github.ref_name == 'feat'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a  # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download current task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition dev-app \
+            --query taskDefinition \
+            --output json > task-def.json
+
+      - name: Render new task definition (이미지 교체)
+        id: render-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@6853cfae8c3a7d978fbf68b5a55453395541dfbb  # v1.8.5
+        with:
+          task-definition: task-def.json
+          container-name: dev-app
+          image: ${{ needs.push-image.outputs.image }}
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@a310a830f5c14e583e35d84e4e1ec7dd177c3c9c  # v2.6.2
+        with:
+          task-definition: ${{ steps.render-task-def.outputs.task-definition }}
+          service: dev-app-service
+          cluster: dev-cluster
+          wait-for-service-stability: true
+
+      - name: Notify Slack (deploy success)
+        if: success()
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          payload: |
+            {"text": "✅ dev 배포 완료 — Backend | `${{ github.sha }}`"}
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
+          SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
+
+      - name: Notify Slack (deploy failure)
+        if: failure()
+        uses: slackapi/slack-github-action@v1.27.0
+        with:
+          payload: |
+            {"text": "❌ dev 배포 실패 — Backend | `${{ github.sha }}` | <${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}|로그 보기>"}
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL }}
           SLACK_WEBHOOK_TYPE: INCOMING_WEBHOOK
