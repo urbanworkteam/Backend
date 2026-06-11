@@ -85,6 +85,9 @@ farmily:
     test-mode: ${PORTONE_TEST_MODE:true}
   fcm:
     service-account-json: ${FCM_SERVICE_ACCOUNT_JSON:}
+    dry-run: ${FCM_DRY_RUN:false}
+  experiment:
+    enabled: ${EXPERIMENT_ENABLED:false}
   plans:
     free:
       credits-limit: 5

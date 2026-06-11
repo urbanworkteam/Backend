@@ -25,6 +25,9 @@ public class FcmClient {
     @Value("${farmily.fcm.service-account-json:}")
     private String serviceAccountJson;
 
+    @Value("${farmily.fcm.dry-run:false}")
+    private boolean dryRun;
+
     private FirebaseMessaging messaging;
 
     @PostConstruct
@@ -53,7 +56,7 @@ public class FcmClient {
                     .setNotification(Notification.builder().setTitle(title).setBody(body).build())
                     .putAllData(deepLink != null ? Map.of("deepLink", deepLink) : Map.of())
                     .build();
-            var res = messaging.sendEachForMulticast(msg);
+            var res = messaging.sendEachForMulticast(msg, dryRun);
             log.info("FCM 발송: success={}, fail={}", res.getSuccessCount(), res.getFailureCount());
         } catch (Exception e) {
             log.warn("FCM 발송 실패: {}", e.getMessage());
