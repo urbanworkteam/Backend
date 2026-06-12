@@ -54,6 +54,9 @@ logs/
 ### Docs (local only) ###
 docs/
 
+### Load test (local only) ###
+loadtest/
+
 ### Claude Code local state ###
 .claude/
 
