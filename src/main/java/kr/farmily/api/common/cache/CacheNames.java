@@ -7,6 +7,12 @@ public final class CacheNames {
 
     private CacheNames() {}
 
+    /**
+     * 캐시 키 prefix 버전. 직렬화 포맷이 바뀌면 이 값을 bump(v2→v3)해서 옛 키와 자동 격리한다.
+     * (포맷 불일치로 인한 역직렬화 SerializationException 재발 방지. {@link kr.farmily.api.common.config.RedisConfig} 의 prefix 에서 사용)
+     */
+    public static final String VERSION = "v2";
+
     /** 기상청 단기예보 (grid:date 키, 60분) */
     public static final String WEATHER = "weather";
     /** 공개 농장 프로필 (handle 키, 10분) */
