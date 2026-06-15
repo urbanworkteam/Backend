@@ -47,6 +47,10 @@ management:
   endpoint:
     health:
       show-details: when-authorized
+      group:
+        cache:
+          include: redis
+          show-components: always
 
 farmily:
   jwt:
