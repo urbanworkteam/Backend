@@ -9,7 +9,9 @@ import kr.farmily.api.subscription.dto.PlanItemResponse;
 import kr.farmily.api.subscription.dto.SubscriptionResponse;
 import kr.farmily.api.subscription.repository.PaymentRepository;
 import kr.farmily.api.subscription.repository.SubscriptionRepository;
+import kr.farmily.api.common.cache.CacheNames;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,6 +62,7 @@ public class SubscriptionService {
         );
     }
 
+    @CacheEvict(cacheNames = CacheNames.MY_PAGE, key = "#userId")
     @Transactional
     public OffsetDateTime cancel(long userId) {
         Subscription s = subRepo.findByUserIdForUpdate(userId)

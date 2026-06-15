@@ -6,7 +6,9 @@ import kr.farmily.api.subscription.config.PlanProperties;
 import kr.farmily.api.subscription.domain.Subscription;
 import kr.farmily.api.subscription.dto.CreditStatus;
 import kr.farmily.api.subscription.repository.SubscriptionRepository;
+import kr.farmily.api.common.cache.CacheNames;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -20,6 +22,7 @@ public class CreditService {
     private final CreditIdempotencyStore idem;
     private final PlanProperties plans;
 
+    @CacheEvict(cacheNames = CacheNames.MY_PAGE, key = "#userId")
     @Transactional
     public void tryConsume(long userId, String idemKey) {
         if (idemKey == null || idemKey.isBlank()) {
@@ -38,6 +41,7 @@ public class CreditService {
         sub.incrementUsed();
     }
 
+    @CacheEvict(cacheNames = CacheNames.MY_PAGE, key = "#userId")
     @Transactional
     public void refund(long userId, String idemKey) {
         subRepo.findByUserIdForUpdate(userId).ifPresent(Subscription::decrementUsed);

@@ -3,6 +3,7 @@ package kr.farmily.api.diary.controller;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import kr.farmily.api.common.cache.CacheNames;
 import kr.farmily.api.common.response.ApiResponse;
 import kr.farmily.api.common.response.PageResponse;
 import kr.farmily.api.common.security.CurrentUser;
@@ -15,6 +16,7 @@ import kr.farmily.api.diary.service.DiaryReadService;
 import kr.farmily.api.diary.service.DiaryUpdateService;
 import kr.farmily.api.diary.service.DiaryWriteService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.*;
 
@@ -77,6 +79,7 @@ public class DiaryController {
 
     @GetMapping("/work-types")
     @Operation(summary = "작업 유형 마스터 7종")
+    @Cacheable(cacheNames = CacheNames.WORK_TYPES)
     public ApiResponse<List<Map<String, String>>> workTypes() {
         return ApiResponse.ok(WorkType.all().stream()
                 .map(w -> Map.of("code", w.name(), "label", w.label, "icon", w.icon))

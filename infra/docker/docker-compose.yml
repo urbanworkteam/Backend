@@ -49,6 +49,7 @@ services:
         condition: service_started
     environment:
       SPRING_PROFILES_ACTIVE: local
+      REDIS_HOST: redis
       SPRING_DATASOURCE_URL: jdbc:postgresql://postgres:5432/farmily
       SPRING_DATASOURCE_USERNAME: farmily
       SPRING_DATASOURCE_PASSWORD: farmily

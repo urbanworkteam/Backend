@@ -31,11 +31,13 @@ public class DiaryUpdateService {
     private final WeatherService weatherService;
     private final PhotoKeyValidator photoKeyValidator;
     private final S3Service s3Service;
+    private final DiaryCalendarCacheEvictor calendarCacheEvictor;
     private final EntityManager em;
 
     @Transactional
     public DiaryResponse update(long userId, long id, WriteDiaryRequest req) {
         FarmDiary d = readService.requireOwner(userId, id);
+        java.time.LocalDate previousDate = d.getDiaryDate();
 
         FarmLocation location = farmLocationService.requireOwner(userId, req.farmLocationId());
         Crop crop = cropService.requireOwner(userId, req.cropId());
@@ -74,6 +76,9 @@ public class DiaryUpdateService {
                     "해당 농장·날짜에 이미 일지가 존재합니다", "date");
         }
 
+        // 날짜가 바뀌었으면 이전 달·새 달 캘린더 모두 무효화
+        calendarCacheEvictor.evict(userId, previousDate);
+        calendarCacheEvictor.evict(userId, req.date());
         return DiaryResponse.from(d, location, crop, s3Service::toDisplayUrl);
     }
 }

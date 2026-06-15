@@ -10,8 +10,10 @@ import kr.farmily.api.profile.dto.MyProfileResponse;
 import kr.farmily.api.profile.repository.FarmProfileRepository;
 import kr.farmily.api.profile.repository.ProfileBlockRepository;
 import kr.farmily.api.profile.repository.SalesChannelRepository;
+import kr.farmily.api.common.cache.CacheNames;
 import kr.farmily.api.common.upload.S3Service;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,7 @@ public class ProfileService {
     private final SalesChannelRepository channelRepository;
     private final S3Service s3Service;
 
+    @Cacheable(cacheNames = CacheNames.MY_PROFILE, key = "#userId")
     @Transactional
     public MyProfileResponse getMyProfile(long userId) {
         FarmProfile profile = profileRepository.findById(userId)

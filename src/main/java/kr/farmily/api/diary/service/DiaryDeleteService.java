@@ -10,10 +10,12 @@ import org.springframework.transaction.annotation.Transactional;
 public class DiaryDeleteService {
 
     private final DiaryReadService readService;
+    private final DiaryCalendarCacheEvictor calendarCacheEvictor;
 
     @Transactional
     public void delete(long userId, long id) {
         FarmDiary d = readService.requireOwner(userId, id);
         d.softDelete();
+        calendarCacheEvictor.evict(userId, d.getDiaryDate());
     }
 }
