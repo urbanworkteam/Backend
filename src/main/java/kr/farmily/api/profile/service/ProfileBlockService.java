@@ -20,6 +20,7 @@ import java.util.Map;
 public class ProfileBlockService {
 
     private final ProfileBlockRepository blockRepository;
+    private final ProfileCacheEvictor cacheEvictor;
 
     @Transactional
     public void reorder(long userId, BlockReorderRequest req) {
@@ -46,6 +47,7 @@ public class ProfileBlockService {
             }
             target.applyOrder(finalOrder++, in.visible(), in.payload());
         }
+        cacheEvictor.evict(userId);
     }
 
     @Transactional
@@ -56,9 +58,11 @@ public class ProfileBlockService {
         }
         int nextOrder = (int) blockRepository.findByUserIdOrderBySortOrderAsc(userId).stream()
                 .mapToInt(ProfileBlock::getSortOrder).max().orElse(-1) + 1;
-        return blockRepository.save(ProfileBlock.create(
+        ProfileBlock saved = blockRepository.save(ProfileBlock.create(
                 userId, req.blockType(), nextOrder, true,
                 req.payload() != null ? req.payload() : new HashMap<>()));
+        cacheEvictor.evict(userId);
+        return saved;
     }
 
     @Transactional
@@ -69,6 +73,7 @@ public class ProfileBlockService {
         if (target.getBlockType() == BlockType.TEXT) {
             blockRepository.delete(target);
             reindex(userId);
+            cacheEvictor.evict(userId);
         } else {
             throw new BusinessException(ErrorCode.VALIDATION_ERROR,
                     "시스템 블록은 삭제할 수 없습니다", "blockType");

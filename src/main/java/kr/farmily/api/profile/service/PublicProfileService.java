@@ -11,8 +11,10 @@ import kr.farmily.api.profile.repository.FarmProfileRepository;
 import kr.farmily.api.profile.repository.ProfileBlockRepository;
 import kr.farmily.api.profile.repository.SalesChannelRepository;
 import kr.farmily.api.user.domain.User;
+import kr.farmily.api.common.cache.CacheNames;
 import kr.farmily.api.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +30,7 @@ public class PublicProfileService {
     private final SalesChannelRepository channelRepository;
     private final S3Service s3Service;
 
+    @Cacheable(cacheNames = CacheNames.PUBLIC_PROFILE, key = "#handle")
     @Transactional(readOnly = true)
     public PublicProfileResponse findByHandle(String handle) {
         User user = userRepository.findActiveByHandle(handle)

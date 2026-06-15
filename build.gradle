@@ -52,6 +52,8 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-webmvc'
 	implementation 'org.springframework.boot:spring-boot-starter-webflux' // WebClient for KMA/Kakao REST
 	implementation 'org.springframework.boot:spring-boot-starter-json'    // ObjectMapper / Jackson auto-config
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis' // ElastiCache 핫 read 캐시 (Lettuce)
+	implementation 'org.springframework.boot:spring-boot-starter-cache'      // @Cacheable / @CacheEvict 추상화
 
 	// DB
 	implementation 'org.flywaydb:flyway-database-postgresql'

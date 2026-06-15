@@ -1,9 +1,11 @@
 package kr.farmily.api.weather.client;
 
+import kr.farmily.api.common.cache.CacheNames;
 import kr.farmily.api.common.exception.BusinessException;
 import kr.farmily.api.common.exception.ErrorCode;
 import kr.farmily.api.weather.domain.WeatherSnapshot;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
 
@@ -32,6 +34,10 @@ public class KmaForecastClient {
         this.client = WebClient.builder().build();
     }
 
+    // grid+date 단위로 Redis 캐시(60분). 별도 빈이라 WeatherService 의 두 진입점 모두 프록시 경유 → 캐시 적용.
+    // 키 미설정/빈 스냅샷(source=MANUAL)은 캐시하지 않음.
+    @Cacheable(cacheNames = CacheNames.WEATHER, key = "#gridX + ':' + #gridY + ':' + #date",
+            unless = "#result == null || #result.source == 'MANUAL'")
     public WeatherSnapshot fetch(int gridX, int gridY, LocalDate date) {
         if (props.serviceKey() == null || props.serviceKey().isBlank()) {
             log.warn("KMA service key 미설정. 빈 스냅샷 반환");

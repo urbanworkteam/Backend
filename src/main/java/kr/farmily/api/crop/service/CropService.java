@@ -6,7 +6,10 @@ import kr.farmily.api.crop.domain.Crop;
 import kr.farmily.api.crop.dto.CropPatchRequest;
 import kr.farmily.api.crop.dto.CropRequest;
 import kr.farmily.api.crop.repository.CropRepository;
+import kr.farmily.api.common.cache.CacheNames;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.CacheEvict;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,11 +21,13 @@ public class CropService {
 
     private final CropRepository cropRepository;
 
+    @Cacheable(cacheNames = CacheNames.CROPS, key = "#userId")
     @Transactional(readOnly = true)
     public List<Crop> listMine(long userId) {
         return cropRepository.findAllActiveByUser(userId);
     }
 
+    @CacheEvict(cacheNames = CacheNames.CROPS, key = "#userId")
     @Transactional
     public Crop create(long userId, CropRequest req) {
         if (cropRepository.existsActiveByUserAndName(userId, req.name())) {
@@ -36,6 +41,7 @@ public class CropService {
         return cropRepository.save(Crop.create(userId, req.name(), color, req.stage()));
     }
 
+    @CacheEvict(cacheNames = CacheNames.CROPS, key = "#userId")
     @Transactional
     public Crop update(long userId, long cropId, CropPatchRequest req) {
         Crop crop = requireOwner(userId, cropId);
@@ -47,6 +53,7 @@ public class CropService {
         return crop;
     }
 
+    @CacheEvict(cacheNames = CacheNames.CROPS, key = "#userId")
     @Transactional
     public void delete(long userId, long cropId) {
         Crop crop = requireOwner(userId, cropId);

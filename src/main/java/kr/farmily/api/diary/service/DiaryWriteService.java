@@ -35,6 +35,7 @@ public class DiaryWriteService {
     private final WeatherService weatherService;
     private final PhotoKeyValidator photoKeyValidator;
     private final S3Service s3Service;
+    private final DiaryCalendarCacheEvictor calendarCacheEvictor;
     private final EntityManager em;
 
     @Transactional
@@ -58,6 +59,7 @@ public class DiaryWriteService {
                     "해당 농장·날짜에 이미 일지가 존재합니다", "date");
         }
 
+        calendarCacheEvictor.evict(userId, req.date());
         return DiaryResponse.from(diary, location, crop, s3Service::toDisplayUrl);
     }
 

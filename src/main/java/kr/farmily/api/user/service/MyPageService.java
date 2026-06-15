@@ -14,7 +14,9 @@ import kr.farmily.api.subscription.service.CreditService;
 import kr.farmily.api.user.domain.User;
 import kr.farmily.api.user.dto.MyPageResponse;
 import kr.farmily.api.user.repository.UserRepository;
+import kr.farmily.api.common.cache.CacheNames;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,6 +35,7 @@ public class MyPageService {
     private final PaymentRepository paymentRepository;
     private final SubscriptionRepository subscriptionRepository;
 
+    @Cacheable(cacheNames = CacheNames.MY_PAGE, key = "#userId")
     @Transactional(readOnly = true)
     public MyPageResponse getMyPage(long userId) {
         User user = userRepository.findById(userId)

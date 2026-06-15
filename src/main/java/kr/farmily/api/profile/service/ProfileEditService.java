@@ -25,6 +25,7 @@ public class ProfileEditService {
     private final FarmProfileRepository profileRepository;
     private final SalesChannelRepository channelRepository;
     private final PhotoKeyValidator photoKeyValidator;
+    private final ProfileCacheEvictor cacheEvictor;
 
     @Transactional
     public void update(long userId, UpdateProfileRequest req) {
@@ -63,5 +64,6 @@ public class ProfileEditService {
                 channelRepository.save(SalesChannel.create(userId, input.channel(), input.url(), order++));
             }
         }
+        cacheEvictor.evict(userId);
     }
 }

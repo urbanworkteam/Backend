@@ -5,7 +5,9 @@ import kr.farmily.api.crop.repository.CropRepository;
 import kr.farmily.api.diary.domain.FarmDiary;
 import kr.farmily.api.diary.dto.CalendarMonthResponse;
 import kr.farmily.api.diary.repository.FarmDiaryRepository;
+import kr.farmily.api.common.cache.CacheNames;
 import lombok.RequiredArgsConstructor;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +23,7 @@ public class DiaryCalendarService {
     private final FarmDiaryRepository diaryRepository;
     private final CropRepository cropRepository;
 
+    @Cacheable(cacheNames = CacheNames.DIARY_CALENDAR, key = "#userId + ':' + #year + ':' + #month")
     @Transactional(readOnly = true)
     public CalendarMonthResponse getMonth(long userId, int year, int month) {
         YearMonth ym = YearMonth.of(year, month);
