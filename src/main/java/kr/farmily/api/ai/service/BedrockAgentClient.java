@@ -57,8 +57,7 @@ public class BedrockAgentClient {
 
         String caption = (String) response.get("caption");
         List<String> hashtags = (List<String>) response.get("hashtags");
-        Object bestPhotoRaw = response.get("bestPhotoKey");
-        String bestPhotoKey = bestPhotoRaw != null ? (String) bestPhotoRaw : "";
+        List<String> cardImageKeysList = (List<String>) response.get("cardImageKeys");
 
         Map<String, Object> meta = new LinkedHashMap<>();
         meta.put("provider", "agentcore");
@@ -68,8 +67,8 @@ public class BedrockAgentClient {
         meta.put("contentType", response.get("contentType"));
         meta.put("textPool", response.get("textPool"));
 
-        String[] cardImageKeys = (bestPhotoKey != null && !bestPhotoKey.isEmpty())
-                ? new String[]{bestPhotoKey}
+        String[] cardImageKeys = (cardImageKeysList != null && !cardImageKeysList.isEmpty())
+                ? cardImageKeysList.toArray(String[]::new)
                 : new String[]{};
 
         return new Result(
