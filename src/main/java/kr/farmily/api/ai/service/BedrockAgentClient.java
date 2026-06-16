@@ -41,7 +41,7 @@ public class BedrockAgentClient {
                 body.get("userId"), body.get("platform"), body.get("diaryIds"));
 
         Map<?, ?> response = agentCoreWebClient.post()
-                .uri("/")
+                .uri("/invocations")
                 .bodyValue(body)
                 .retrieve()
                 .bodyToMono(Map.class)
