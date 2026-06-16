@@ -9,5 +9,6 @@ public record AiProperties(
         String bedrockAgentId,
         String bedrockAgentAliasId,
         Long invokeTimeoutSeconds,
-        String resultBucket
+        String resultBucket,
+        String agentcoreUrl
 ) {}
