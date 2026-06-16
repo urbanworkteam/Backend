@@ -88,6 +88,7 @@ farmily:
     bedrock-agent-alias-id: ${BEDROCK_AGENT_ALIAS_ID:}
     invoke-timeout-seconds: ${AI_INVOKE_TIMEOUT_SECONDS:120}
     result-bucket: ${AI_RESULT_BUCKET:}
+    agentcore-url: ${AGENTCORE_URL:http://farmily-agentcore.farmily.local:8080}
   portone:
     api-key: ${PORTONE_API_KEY:}
     api-secret: ${PORTONE_API_SECRET:}

@@ -6,12 +6,11 @@ import kr.farmily.api.ai.domain.Platform;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import org.springframework.web.reactive.function.client.WebClient;
 import software.amazon.awssdk.services.bedrockagentruntime.BedrockAgentRuntimeAsyncClient;
 
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.UUID;
+import java.time.Duration;
+import java.util.*;
 
 @Slf4j
 @Component
@@ -20,15 +19,65 @@ public class BedrockAgentClient {
 
     private final BedrockAgentRuntimeAsyncClient bedrock;
     private final AiProperties props;
+    private final WebClient agentCoreWebClient;
 
     public Result invoke(ContentJob job, String diarySummary) {
-        // TODO: Action Group 응답 파싱 — 실제 Bedrock 응답 스트림 처리는 INFRA-002/003 완료 후 구현.
-        // 현재는 provider 값과 무관하게 mock 결과 반환 (SDK 비동기 스트림 핸들러 구현 전).
-        if (!"mock".equalsIgnoreCase(props.provider())) {
-            log.debug("Bedrock provider={} 이지만 응답 스트림 핸들러 미구현 → mock 반환 (bedrock client present={}, summaryLen={})",
-                    props.provider(), bedrock != null, diarySummary == null ? 0 : diarySummary.length());
+        if ("mock".equalsIgnoreCase(props.provider())) {
+            return mock(job);
         }
-        return mock(job);
+        return invokeAgentCore(job);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Result invokeAgentCore(ContentJob job) {
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("userId", String.valueOf(job.getUserId()));
+        body.put("platform", job.getPlatform() == null ? Platform.INSTAGRAM.name() : job.getPlatform().name());
+        body.put("diaryIds", job.getDiaryIds() == null ? List.of() : Arrays.asList(job.getDiaryIds()));
+        body.put("keywords", job.getKeywords() != null ? job.getKeywords() : "");
+        body.put("photoS3Keys", job.getExtraPhotoKeys() == null ? List.of() : Arrays.asList(job.getExtraPhotoKeys()));
+
+        log.info("AgentCore 호출 시작: userId={}, platform={}, diaryIds={}",
+                body.get("userId"), body.get("platform"), body.get("diaryIds"));
+
+        Map<?, ?> response = agentCoreWebClient.post()
+                .uri("/")
+                .bodyValue(body)
+                .retrieve()
+                .bodyToMono(Map.class)
+                .timeout(Duration.ofSeconds(props.invokeTimeoutSeconds()))
+                .block();
+
+        if (response == null || response.containsKey("error")) {
+            String error = response != null ? String.valueOf(response.get("error")) : "null response";
+            throw new RuntimeException("AgentCore 호출 실패: " + error);
+        }
+
+        log.info("AgentCore 응답 수신: agentCoreJobId={}, status={}", response.get("jobId"), response.get("status"));
+
+        String caption = (String) response.get("caption");
+        List<String> hashtags = (List<String>) response.get("hashtags");
+        Object bestPhotoRaw = response.get("bestPhotoKey");
+        String bestPhotoKey = bestPhotoRaw != null ? (String) bestPhotoRaw : "";
+
+        Map<String, Object> meta = new LinkedHashMap<>();
+        meta.put("provider", "agentcore");
+        meta.put("platform", body.get("platform"));
+        meta.put("agentCoreJobId", response.get("jobId"));
+        meta.put("angle", response.get("angle"));
+        meta.put("contentType", response.get("contentType"));
+        meta.put("textPool", response.get("textPool"));
+
+        String[] cardImageKeys = (bestPhotoKey != null && !bestPhotoKey.isEmpty())
+                ? new String[]{bestPhotoKey}
+                : new String[]{};
+
+        return new Result(
+                cardImageKeys,
+                caption,
+                hashtags == null ? new String[0] : hashtags.toArray(String[]::new),
+                meta
+        );
     }
 
     private Result mock(ContentJob job) {
