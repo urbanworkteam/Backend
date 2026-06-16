@@ -82,7 +82,7 @@ farmily:
     service-key: ${KMA_SERVICE_KEY:}
     base-url: ${KMA_BASE_URL:https://apis.data.go.kr/1360000/VilageFcstInfoService_2.0}
   ai:
-    provider: ${AI_PROVIDER:agentcore}
+    provider: ${AI_PROVIDER:mock}
     aws-region: ${AWS_REGION:us-west-2}
     bedrock-agent-id: ${BEDROCK_AGENT_ID:}
     bedrock-agent-alias-id: ${BEDROCK_AGENT_ALIAS_ID:}
