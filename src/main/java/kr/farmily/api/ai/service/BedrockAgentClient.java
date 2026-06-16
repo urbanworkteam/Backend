@@ -36,6 +36,7 @@ public class BedrockAgentClient {
         body.put("diaryIds", job.getDiaryIds() == null ? List.of() : Arrays.asList(job.getDiaryIds()));
         body.put("keywords", job.getKeywords() != null ? job.getKeywords() : "");
         body.put("photoS3Keys", job.getExtraPhotoKeys() == null ? List.of() : Arrays.asList(job.getExtraPhotoKeys()));
+        body.put("jobId", job.getId());
 
         log.info("AgentCore 호출 시작: userId={}, platform={}, diaryIds={}",
                 body.get("userId"), body.get("platform"), body.get("diaryIds"));
