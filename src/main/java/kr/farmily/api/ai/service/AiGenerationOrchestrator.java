@@ -8,6 +8,7 @@ import kr.farmily.api.ai.domain.Platform;
 import kr.farmily.api.ai.event.AiJobCreatedEvent;
 import kr.farmily.api.ai.repository.ContentJobRepository;
 import kr.farmily.api.ai.repository.ContentResultRepository;
+import kr.farmily.api.diary.repository.DiaryPhotoRepository;
 import kr.farmily.api.subscription.service.CreditService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,7 +19,10 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Slf4j
@@ -28,7 +32,7 @@ public class AiGenerationOrchestrator {
 
     private final ContentJobRepository jobRepo;
     private final ContentResultRepository resultRepo;
-    private final DiarySummaryBuilder summaryBuilder;
+    private final DiaryPhotoRepository diaryPhotoRepo;
     private final CreditService creditService;
     private final BedrockAgentClient bedrockClient;
     private final AiProperties aiProps;
@@ -52,12 +56,12 @@ public class AiGenerationOrchestrator {
         }
         try {
             job.transition(JobStatus.ANALYZING, 20);
-            String summary = summaryBuilder.build(job.getUserId(), job.getDiaryIds());
 
             job.transition(JobStatus.ENRICHING, 40);
             job.transition(JobStatus.GENERATING, 70);
 
-            BedrockAgentClient.Result r = bedrockClient.invoke(job, summary);
+            List<String> photoKeys = buildPhotoKeys(job);
+            BedrockAgentClient.Result r = bedrockClient.invoke(job, photoKeys);
             resultRepo.save(ContentResult.create(job.getId(),
                     r.cardImageKeys(), r.caption(), r.hashtags(), r.meta()));
 
@@ -72,6 +76,23 @@ public class AiGenerationOrchestrator {
                 } catch (Exception ignored) {}
             }
         }
+    }
+
+    private List<String> buildPhotoKeys(ContentJob job) {
+        List<String> result = new ArrayList<>();
+        if (job.getExtraPhotoKeys() != null) {
+            result.addAll(Arrays.asList(job.getExtraPhotoKeys()));
+        }
+        if (result.size() < 4 && job.getDiaryIds() != null && job.getDiaryIds().length > 0) {
+            List<String> diaryKeys = diaryPhotoRepo.findS3KeysByDiaryIds(Arrays.asList(job.getDiaryIds()));
+            for (String key : diaryKeys) {
+                if (!result.contains(key)) {
+                    result.add(key);
+                }
+                if (result.size() >= 4) break;
+            }
+        }
+        return result;
     }
 
     @SuppressWarnings("unused")

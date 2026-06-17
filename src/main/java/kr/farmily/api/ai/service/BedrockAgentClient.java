@@ -21,21 +21,21 @@ public class BedrockAgentClient {
     private final AiProperties props;
     private final WebClient agentCoreWebClient;
 
-    public Result invoke(ContentJob job, String diarySummary) {
+    public Result invoke(ContentJob job, List<String> photoKeys) {
         if ("mock".equalsIgnoreCase(props.provider())) {
             return mock(job);
         }
-        return invokeAgentCore(job);
+        return invokeAgentCore(job, photoKeys);
     }
 
     @SuppressWarnings("unchecked")
-    private Result invokeAgentCore(ContentJob job) {
+    private Result invokeAgentCore(ContentJob job, List<String> photoKeys) {
         Map<String, Object> body = new LinkedHashMap<>();
         body.put("userId", String.valueOf(job.getUserId()));
         body.put("platform", job.getPlatform() == null ? Platform.INSTAGRAM.name() : job.getPlatform().name());
         body.put("diaryIds", job.getDiaryIds() == null ? List.of() : Arrays.asList(job.getDiaryIds()));
         body.put("keywords", job.getKeywords() != null ? job.getKeywords() : "");
-        body.put("photoS3Keys", job.getExtraPhotoKeys() == null ? List.of() : Arrays.asList(job.getExtraPhotoKeys()));
+        body.put("photoS3Keys", photoKeys);
         body.put("jobId", job.getId());
 
         log.info("AgentCore 호출 시작: userId={}, platform={}, diaryIds={}",
