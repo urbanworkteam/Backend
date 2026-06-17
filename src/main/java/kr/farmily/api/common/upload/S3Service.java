@@ -54,11 +54,16 @@ public class S3Service {
 
     /**
      * key -> 화면 표시용 URL 변환의 단일 출처.
-     * 현재 구현은 업로드 버킷 presigned GET(표시용 TTL). 추후 업로드 버킷 전용 CDN으로
-     * 승격 시 이 메서드 구현만 교체하면 모든 호출부가 그대로 따라온다.
+     * cdn-base-url(farmily.s3.cdn-base-url)이 설정돼 있으면 버킷 전용 CloudFront(OAC)
+     * 고정 URL "<cdnBaseUrl>/<key>" 를 반환한다. 비어 있으면(로컬 등) 기존 업로드 버킷
+     * presigned GET(표시용 TTL) 으로 fallback 한다.
      */
     public String toDisplayUrl(String key) {
         if (key == null || key.isBlank()) return null;
+        String cdn = props.cdnBaseUrl();
+        if (cdn != null && !cdn.isBlank()) {
+            return cdn.replaceAll("/+$", "") + "/" + key.replaceAll("^/+", "");
+        }
         long ttl = props.displayTtlSeconds() != null ? props.displayTtlSeconds() : 3600L;
         return presignGet(key, Duration.ofSeconds(ttl));
     }
