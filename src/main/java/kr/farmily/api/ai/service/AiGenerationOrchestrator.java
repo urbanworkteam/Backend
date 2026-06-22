@@ -55,11 +55,6 @@ public class AiGenerationOrchestrator {
             return;
         }
         try {
-            job.transition(JobStatus.ANALYZING, 20);
-
-            job.transition(JobStatus.ENRICHING, 40);
-            job.transition(JobStatus.GENERATING, 70);
-
             List<String> photoKeys = buildPhotoKeys(job);
             BedrockAgentClient.Result r = bedrockClient.invoke(job, photoKeys);
             resultRepo.save(ContentResult.create(job.getId(),
