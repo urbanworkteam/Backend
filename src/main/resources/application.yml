@@ -11,6 +11,8 @@ spring:
       maximum-pool-size: ${DB_POOL_SIZE:30}
   data:
     redis:
+      ssl:
+        enabled: true
       host: ${REDIS_HOST:localhost}
       port: ${REDIS_PORT:6379}
       timeout: 2s
