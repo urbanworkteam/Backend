@@ -74,6 +74,9 @@ dependencies {
 	// AWS SDK (S3 presign, Bedrock Agent)
 	implementation 'software.amazon.awssdk:s3'
 	implementation 'software.amazon.awssdk:bedrockagentruntime'
+	// IRSA(EKS)는 웹 아이덴티티 토큰을 STS로 교환해 자격증명을 얻으므로 sts 모듈 필수
+	// (ECS 컨테이너 자격증명 방식에선 불필요했어서 누락돼 있었음)
+	implementation 'software.amazon.awssdk:sts'
 
 	// Firebase Admin (FCM)
 	implementation 'com.google.firebase:firebase-admin:9.4.3'
