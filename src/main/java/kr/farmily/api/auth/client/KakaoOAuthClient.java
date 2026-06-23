@@ -34,6 +34,14 @@ public class KakaoOAuthClient {
         return fetchMe(accessToken);
     }
 
+    /**
+     * 모바일 네이티브 SDK 가 이미 발급받은 카카오 액세스 토큰으로 프로필만 조회.
+     * (code 교환 단계를 건너뜀 — client_secret 불필요)
+     */
+    public KakaoProfile fetchProfileByToken(String accessToken) {
+        return fetchMe(accessToken);
+    }
+
     private String exchangeCodeForToken(String code, String redirectUri) {
         MultiValueMap<String, String> form = new LinkedMultiValueMap<>();
         form.add("grant_type", "authorization_code");

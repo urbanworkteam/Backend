@@ -36,7 +36,10 @@ public class AuthService {
             return issueForUser(resolveDevMasterUser(), httpReq);
         }
 
-        KakaoProfile profile = kakaoClient.fetchProfile(req.code(), req.redirectUri());
+        // 모바일 네이티브 SDK 경로: 액세스 토큰이 오면 code 교환 없이 프로필만 조회
+        KakaoProfile profile = req.hasAccessToken()
+                ? kakaoClient.fetchProfileByToken(req.accessToken())
+                : kakaoClient.fetchProfile(req.code(), req.redirectUri());
 
         User user = userRepository.findByKakaoId(profile.kakaoId()).orElse(null);
         if (user == null) {
