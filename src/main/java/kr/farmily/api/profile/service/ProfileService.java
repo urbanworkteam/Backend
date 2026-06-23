@@ -10,6 +10,8 @@ import kr.farmily.api.profile.dto.MyProfileResponse;
 import kr.farmily.api.profile.repository.FarmProfileRepository;
 import kr.farmily.api.profile.repository.ProfileBlockRepository;
 import kr.farmily.api.profile.repository.SalesChannelRepository;
+import kr.farmily.api.user.domain.User;
+import kr.farmily.api.user.repository.UserRepository;
 import kr.farmily.api.common.cache.CacheNames;
 import kr.farmily.api.common.upload.S3Service;
 import lombok.RequiredArgsConstructor;
@@ -27,11 +29,15 @@ public class ProfileService {
     private final FarmProfileRepository profileRepository;
     private final ProfileBlockRepository blockRepository;
     private final SalesChannelRepository channelRepository;
+    private final UserRepository userRepository;
     private final S3Service s3Service;
 
     @Cacheable(cacheNames = CacheNames.MY_PROFILE, key = "#userId")
     @Transactional
     public MyProfileResponse getMyProfile(long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new BusinessException(ErrorCode.USER_NOT_FOUND));
+
         FarmProfile profile = profileRepository.findById(userId)
                 .orElseThrow(() -> new BusinessException(ErrorCode.PROFILE_NOT_FOUND));
 
@@ -43,6 +49,9 @@ public class ProfileService {
         List<SalesChannel> channels = channelRepository.findByUserIdOrderBySortOrderAscIdAsc(userId);
 
         return new MyProfileResponse(
+                user.getId(),
+                user.getHandle(),
+                user.isOnboarded(),
                 new MyProfileResponse.FarmHeader(
                         profile.getFarmName(),
                         profile.getRegion(),
