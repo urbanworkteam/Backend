@@ -7,6 +7,9 @@ import java.util.List;
 import java.util.Map;
 
 public record MyProfileResponse(
+        Long id,
+        String handle,
+        boolean onboarded,
         FarmHeader farm,
         List<SalesChannelDto> salesChannels,
         List<BlockDto> blocks
