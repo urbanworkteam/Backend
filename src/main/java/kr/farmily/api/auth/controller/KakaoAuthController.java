@@ -23,7 +23,7 @@ public class KakaoAuthController {
     private final AuthService authService;
 
     @PostMapping("/kakao")
-    @Operation(summary = "카카오 OAuth 로그인", description = "카카오 authorization code 로 JWT 발급")
+    @Operation(summary = "카카오 OAuth 로그인", description = "웹: authorization code / 모바일 네이티브 SDK: accessToken 으로 JWT 발급")
     public ApiResponse<AuthTokenResponse> kakaoLogin(@Valid @RequestBody KakaoLoginRequest req,
                                                      HttpServletRequest httpReq) {
         return ApiResponse.ok(authService.loginWithKakao(req, httpReq));
