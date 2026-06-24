@@ -125,7 +125,8 @@ jobs:
     if: github.ref_name == 'main'
     runs-on: ubuntu-latest
     permissions:
-      contents: read       # GITHUB_TOKEN 미사용(App 토큰) → 최소권한
+      id-token: write      # crane copy용 OIDC 토큰 발급(configure-aws-credentials) — 필수
+      contents: read       # checkout(GITHUB_TOKEN). Infra push는 App 토큰 별도
     steps:
       - name: Checkout Backend (머지 부모 접근용)
         uses: actions/checkout@v4
