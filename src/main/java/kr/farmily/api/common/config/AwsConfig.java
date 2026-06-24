@@ -16,8 +16,12 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.S3ClientBuilder;
 import software.amazon.awssdk.services.s3.S3Configuration;
 import software.amazon.awssdk.services.s3.presigner.S3Presigner;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import reactor.netty.http.client.HttpClient;
+import reactor.netty.resources.ConnectionProvider;
 
 import java.net.URI;
+import java.time.Duration;
 
 @Configuration
 public class AwsConfig {
@@ -59,8 +63,22 @@ public class AwsConfig {
 
     @Bean
     public WebClient agentCoreWebClient(AiProperties props) {
+        // AgentCore는 CloudMap(farmily-agentcore.farmily.local)으로 연결되며 재배포 시 task IP가 바뀐다.
+        // 기본 커넥션 풀은 keep-alive 연결을 오래 보관해, 옛 IP로의 죽은 연결을 재사용하다
+        // "connection already closed"로 실패한다. idle/수명을 짧게 잡고 백그라운드 eviction을 켜서
+        // 죽은 연결을 자동 폐기 → 재배포 후 백엔드 재시작 없이 새 IP로 자동 재연결되도록 한다.
+        ConnectionProvider provider = ConnectionProvider.builder("agentcore")
+                .maxIdleTime(Duration.ofSeconds(30))       // 30초 이상 idle 연결 폐기
+                .maxLifeTime(Duration.ofSeconds(60))       // 연결 최대 수명 — 주기적 재생성으로 DNS 재해석 유도
+                .evictInBackground(Duration.ofSeconds(30)) // 백그라운드에서 만료 연결 정리
+                .build();
+
+        HttpClient httpClient = HttpClient.create(provider)
+                .responseTimeout(Duration.ofSeconds(props.invokeTimeoutSeconds()));
+
         return WebClient.builder()
                 .baseUrl(props.agentcoreUrl())
+                .clientConnector(new ReactorClientHttpConnector(httpClient))
                 .defaultHeader(HttpHeaders.CONTENT_TYPE, MediaType.APPLICATION_JSON_VALUE)
                 .build();
     }
