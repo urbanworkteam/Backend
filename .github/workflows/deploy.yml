@@ -161,9 +161,11 @@ jobs:
       # 결정 C: dev 이미지 없으면 승격 skip (조용히/시끄럽게는 app_changed로 분기)
       - name: Check dev image exists
         id: check
+        env:
+          SRC_SHA: ${{ steps.src.outputs.src_sha }}   # 셸 직접 보간 금지(인젝션 방지) → env 경유
         run: |
           if aws ecr describe-images --repository-name farmily-api-dev \
-               --image-ids imageTag="dev-${{ steps.src.outputs.src_sha }}" \
+               --image-ids imageTag="dev-$SRC_SHA" \
                --region "$AWS_REGION" >/dev/null 2>&1; then
             echo "exists=true"  >> "$GITHUB_OUTPUT"
           else
@@ -195,10 +197,11 @@ jobs:
         if: steps.check.outputs.exists == 'true'
         env:
           REGISTRY: ${{ steps.ecr-login.outputs.registry }}
+          SRC_SHA: ${{ steps.src.outputs.src_sha }}    # 셸 직접 보간 금지(인젝션 방지)
         run: |
           crane copy \
-            "$REGISTRY/farmily-api-dev:dev-${{ steps.src.outputs.src_sha }}" \
-            "$REGISTRY/farmily-api:prod-${{ steps.src.outputs.src_sha }}"
+            "$REGISTRY/farmily-api-dev:dev-$SRC_SHA" \
+            "$REGISTRY/farmily-api:prod-$SRC_SHA"
 
       - name: Generate GitHub App token
         if: steps.check.outputs.exists == 'true'
