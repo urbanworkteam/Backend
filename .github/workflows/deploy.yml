@@ -124,6 +124,9 @@ jobs:
     needs: ci
     if: github.ref_name == 'main'
     runs-on: ubuntu-latest
+    outputs:
+      src_sha: ${{ steps.src.outputs.src_sha }}
+      promoted: ${{ steps.check.outputs.exists }}
     permissions:
       id-token: write      # crane copy용 OIDC 토큰 발급(configure-aws-credentials) — 필수
       contents: read       # checkout(GITHUB_TOKEN). Infra push는 App 토큰 별도
@@ -247,6 +250,48 @@ jobs:
             - Backend commit: ${{ github.server_url }}/${{ github.repository }}/commit/${{ github.sha }}
             - 머지하면 ArgoCD가 prod-eks에 반영.
           labels: gitops,auto-bump
+
+  # ─── Job 3b: ECS 배포 (prod, AI 고도화 지원) ─── main push만
+  # EKS가 primary(weight 100%)이지만, AI 담당이 ECS 환경에서 고도화 작업 중이므로
+  # Backend 변경을 ECS에도 자동 반영. build-once: gitops-update-prod가 crane copy한
+  # farmily-api:prod-<sha>를 그대로 사용(재빌드 X). HTTP weight 0이라 사용자 영향 0.
+  # 고도화 완료 후 ECS 내리면 이 job 제거.
+  deploy-ecs-prod:
+    needs: [ci, gitops-update-prod]
+    if: github.ref_name == 'main' && needs.gitops-update-prod.outputs.promoted == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - name: Configure AWS credentials (OIDC)
+        uses: aws-actions/configure-aws-credentials@7474bc4690e29a8392af63c5b98e7449536d5c3a  # v4.3.1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Download current task definition
+        run: |
+          aws ecs describe-task-definition \
+            --task-definition prod-app \
+            --query taskDefinition \
+            --output json > task-def.json
+
+      - name: Render new task definition
+        id: render-task-def
+        uses: aws-actions/amazon-ecs-render-task-definition@6853cfae8c3a7d978fbf68b5a55453395541dfbb  # v1.8.5
+        with:
+          task-definition: task-def.json
+          container-name: prod-app
+          image: 851957594139.dkr.ecr.ap-northeast-2.amazonaws.com/farmily-api:prod-${{ needs.gitops-update-prod.outputs.src_sha }}
+
+      - name: Deploy to ECS
+        uses: aws-actions/amazon-ecs-deploy-task-definition@a310a830f5c14e583e35d84e4e1ec7dd177c3c9c  # v2.6.2
+        with:
+          task-definition: ${{ steps.render-task-def.outputs.task-definition }}
+          service: prod-app-service
+          cluster: prod-cluster
+          wait-for-service-stability: true
 
   # ─── Job 4: GitOps 이미지 태그 bump (dev) ─── feat push만
   # ArgoCD(pull-CD)가 main을 보고 당겨감. 클러스터 직접 안 건드림, AWS 권한 0.
