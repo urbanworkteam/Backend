@@ -16,10 +16,9 @@ RUN ./gradlew bootJar --no-daemon -x test
 
 FROM eclipse-temurin:21-jre
 WORKDIR /app
-# OTel 자바 에이전트 — 코드 수정 없이 Spring MVC·JDBC·HTTP 호출을 자동 추적해 Tempo로 보낸다.
-# 버전 고정(재현성·롤백). 트레이스 목적지·샘플링 등 OTEL_* 설정은 배포(차트 values)에서 주입.
-ADD https://github.com/open-telemetry/opentelemetry-java-instrumentation/releases/download/v2.29.0/opentelemetry-javaagent.jar /app/opentelemetry-javaagent.jar
+# 트레이스 계측은 이미지에 박지 않는다. CloudWatch Application Signals 가 EKS 파드에 ADOT 자바에이전트를
+# 런타임에 자동 주입(deployment-app.yaml 의 inject-java 어노테이션). 이미지에 javaagent 를 또 박으면 이중 계측 충돌.
 COPY --from=builder /workspace/build/libs/*.jar app.jar
 EXPOSE 8080
 ENV SPRING_PROFILES_ACTIVE=local
-ENTRYPOINT ["java","-javaagent:/app/opentelemetry-javaagent.jar","-jar","/app/app.jar"]
+ENTRYPOINT ["java","-jar","/app/app.jar"]
