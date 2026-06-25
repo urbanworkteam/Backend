@@ -73,7 +73,14 @@ public class AwsConfig {
                 .evictInBackground(Duration.ofSeconds(30)) // 백그라운드에서 만료 연결 정리
                 .build();
 
+        // ConnectionProvider(연결 수명)만으로는 부족하다 — Netty DNS 리졸버가 옛 IP를
+        // 계속 캐시해, 재배포로 task IP가 바뀌어도 "새 연결"마저 죽은 옛 IP로 다이얼하며
+        // "connection already closed"가 재발한다. Cloud Map A레코드를 짧게만 캐시해
+        // 재배포 후 수 초 내 새 IP로 재해석되도록 한다.
         HttpClient httpClient = HttpClient.create(provider)
+                .resolver(spec -> spec
+                        .cacheMaxTimeToLive(Duration.ofSeconds(5))
+                        .cacheNegativeTimeToLive(Duration.ofSeconds(1)))
                 .responseTimeout(Duration.ofSeconds(props.invokeTimeoutSeconds()));
 
         return WebClient.builder()

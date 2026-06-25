@@ -7,6 +7,9 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.web.reactive.function.client.WebClient;
+import reactor.netty.channel.AbortedException;
+import reactor.netty.http.client.PrematureCloseException;
+import reactor.util.retry.Retry;
 import software.amazon.awssdk.services.bedrockagentruntime.BedrockAgentRuntimeAsyncClient;
 
 import java.time.Duration;
@@ -46,6 +49,9 @@ public class BedrockAgentClient {
                 .bodyValue(body)
                 .retrieve()
                 .bodyToMono(Map.class)
+                // 재배포 직후 DNS 캐시 만료 전 첫 호출이 죽은 연결을 잡는 레이스 흡수.
+                // 연결 단계 오류만 1회 재시도(새 연결로 재해석) — 사용자 영향 0.
+                .retryWhen(Retry.max(1).filter(BedrockAgentClient::isConnectionError))
                 .timeout(Duration.ofSeconds(props.invokeTimeoutSeconds()))
                 .block();
 
@@ -78,6 +84,28 @@ public class BedrockAgentClient {
                 hashtags == null ? new String[0] : hashtags.toArray(String[]::new),
                 meta
         );
+    }
+
+    /**
+     * 연결 단계 실패만 재시도 대상으로 판정. 죽은 keep-alive 연결 재사용/재배포 IP 변경으로
+     * 인한 "connection already closed"·prematurely closed·reset 류만 잡고,
+     * 응답을 받은 뒤의 비즈니스 오류는 재시도하지 않는다.
+     */
+    private static boolean isConnectionError(Throwable ex) {
+        for (Throwable t = ex; t != null; t = t.getCause()) {
+            if (t instanceof AbortedException || t instanceof PrematureCloseException) {
+                return true;
+            }
+            String m = t.getMessage();
+            if (m != null) {
+                String lower = m.toLowerCase();
+                if (lower.contains("connection")
+                        && (lower.contains("closed") || lower.contains("reset") || lower.contains("refused"))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     private Result mock(ContentJob job) {
