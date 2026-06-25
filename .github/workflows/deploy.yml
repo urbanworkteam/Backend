@@ -168,12 +168,23 @@ jobs:
         env:
           SRC_SHA: ${{ steps.src.outputs.src_sha }}   # 셸 직접 보간 금지(인젝션 방지) → env 경유
         run: |
-          if aws ecr describe-images --repository-name farmily-api-dev \
-               --image-ids imageTag="dev-$SRC_SHA" \
-               --region "$AWS_REGION" >/dev/null 2>&1; then
+          # describe-images 실패를 "이미지 없음"과 "그 외 오류"로 구분한다.
+          # 옛 코드는 >/dev/null 2>&1로 모든 비정상 종료를 exists=false 처리 → describe-images가 순간 실패
+          # (throttling·권한·네트워크·ECR 장애)해도 "dev 이미지 없음"으로 오판 → prod 승격을 조용히 skip(사고 원인).
+          # → ImageNotFoundException만 false, 그 외 오류는 step을 실패시켜(재실행 유도) 오판 차단.
+          set +e
+          ERR=$(aws ecr describe-images --repository-name farmily-api-dev \
+                  --image-ids imageTag="dev-$SRC_SHA" \
+                  --region "$AWS_REGION" 2>&1 >/dev/null)
+          RC=$?
+          set -e
+          if [ "$RC" -eq 0 ]; then
             echo "exists=true"  >> "$GITHUB_OUTPUT"
-          else
+          elif printf '%s' "$ERR" | grep -q "ImageNotFoundException"; then
             echo "exists=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "::error::ECR describe-images 실패(이미지 없음 아님, 재실행 필요): $ERR"
+            exit 1
           fi
 
       # 계층화 skip ① 앱 변경인데 dev 이미지 없음 = 진짜 배포 누락 → ⚠️ Slack
