@@ -172,20 +172,33 @@ jobs:
           # 옛 코드는 >/dev/null 2>&1로 모든 비정상 종료를 exists=false 처리 → describe-images가 순간 실패
           # (throttling·권한·네트워크·ECR 장애)해도 "dev 이미지 없음"으로 오판 → prod 승격을 조용히 skip(사고 원인).
           # → ImageNotFoundException만 false, 그 외 오류는 step을 실패시켜(재실행 유도) 오판 차단.
-          set +e
-          ERR=$(aws ecr describe-images --repository-name farmily-api-dev \
-                  --image-ids imageTag="dev-$SRC_SHA" \
-                  --region "$AWS_REGION" 2>&1 >/dev/null)
-          RC=$?
-          set -e
-          if [ "$RC" -eq 0 ]; then
-            echo "exists=true"  >> "$GITHUB_OUTPUT"
-          elif printf '%s' "$ERR" | grep -q "ImageNotFoundException"; then
-            echo "exists=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "::error::ECR describe-images 실패(이미지 없음 아님, 재실행 필요): $ERR"
-            exit 1
-          fi
+          #
+          # ⚠️ 타이밍 경쟁: dev 이미지는 feat의 push-image 잡이 만든다. 머지가 그 빌드보다 빠르면
+          # 이 main 잡이 돌 때 dev-<sha>가 아직 ECR에 없어 ImageNotFound → 승격 누락(2026-06-26 사고).
+          # → ImageNotFound면 즉시 포기하지 말고 최대 ~8분(빌드 소요 ~5분 + 여유) 폴링해 빌드 완료를 흡수한다.
+          #   끝까지 없으면(feat 우회 / 빌드 실패) exists=false → 아래 단계에서 Slack 알림(진짜 누락).
+          MAX=32; SLEEP=15   # 32 × 15s = 8분
+          for i in $(seq 1 "$MAX"); do
+            set +e
+            ERR=$(aws ecr describe-images --repository-name farmily-api-dev \
+                    --image-ids imageTag="dev-$SRC_SHA" \
+                    --region "$AWS_REGION" 2>&1 >/dev/null)
+            RC=$?
+            set -e
+            if [ "$RC" -eq 0 ]; then
+              echo "exists=true" >> "$GITHUB_OUTPUT"
+              echo "✅ dev-$SRC_SHA 발견 (시도 $i/$MAX)"
+              exit 0
+            elif printf '%s' "$ERR" | grep -q "ImageNotFoundException"; then
+              echo "⏳ dev-$SRC_SHA 아직 없음 — feat 빌드(push-image) 대기 ($i/$MAX)"
+              sleep "$SLEEP"
+            else
+              echo "::error::ECR describe-images 실패(이미지 없음 아님, 재실행 필요): $ERR"
+              exit 1
+            fi
+          done
+          echo "exists=false" >> "$GITHUB_OUTPUT"
+          echo "⚠️ dev-$SRC_SHA 8분 대기 후에도 없음 → 승격 skip (feat 우회 or 빌드 실패 의심)"
 
       # 계층화 skip ① 앱 변경인데 dev 이미지 없음 = 진짜 배포 누락 → ⚠️ Slack
       - name: Notify skip (app changed, image missing)
