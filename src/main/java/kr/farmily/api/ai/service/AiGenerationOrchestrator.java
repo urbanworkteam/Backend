@@ -78,13 +78,15 @@ public class AiGenerationOrchestrator {
         if (job.getExtraPhotoKeys() != null) {
             result.addAll(Arrays.asList(job.getExtraPhotoKeys()));
         }
-        if (result.size() < 4 && job.getDiaryIds() != null && job.getDiaryIds().length > 0) {
+        // 스마트스토어 상세 카드는 이미지 슬롯이 7개(표지·본문·신뢰체크 ×1 + 셀링포인트 ×4) → 7장, 인스타는 4장
+        int cap = job.getPlatform() == Platform.SMARTSTORE ? 7 : 4;
+        if (result.size() < cap && job.getDiaryIds() != null && job.getDiaryIds().length > 0) {
             List<String> diaryKeys = diaryPhotoRepo.findS3KeysByDiaryIds(Arrays.asList(job.getDiaryIds()));
             for (String key : diaryKeys) {
                 if (!result.contains(key)) {
                     result.add(key);
                 }
-                if (result.size() >= 4) break;
+                if (result.size() >= cap) break;
             }
         }
         return result;
